@@ -8,12 +8,14 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PastOrPresent;
 import java.time.LocalDate;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 public class User {
 	private final Integer id;
-	private Map<Integer, User> friends;
+
+	private Set<Integer> friends = new HashSet<>();
 
 	@NotBlank(message = "Почта не должна быть из одних пробелов")
 	@Email(message = "Почта должно быть почтой")
@@ -34,8 +36,8 @@ public class User {
 //	имя для отображения может быть пустым — в таком случае будет использован логин;
 //	дата рождения не может быть в будущем.
 
-	public User addFriend(User user) {
-		return friends.put(user.getId(), user);
+	public boolean addFriend(Integer user) {
+		return friends.add(user);
 	}
 
 	public String getName() {
@@ -46,11 +48,11 @@ public class User {
 	}
 
 
-	public Map<Integer, User> getFriends() {
-		return friends;
+	public Set<Integer> getFriends() {
+		return new HashSet<>(friends);
 	}
 
-	public boolean deleteFriend(Integer user, User currentyUser) {
-		return friends.remove(user, currentyUser);
+	public boolean deleteFriend(Integer user) {
+		return friends.remove(user);
 	}
 }

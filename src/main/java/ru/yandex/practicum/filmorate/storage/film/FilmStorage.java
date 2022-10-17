@@ -14,4 +14,6 @@ public interface FilmStorage {
 	List<Film> films();
 
 	Film getFilm(Integer id);
+
+	public Integer size();
 }

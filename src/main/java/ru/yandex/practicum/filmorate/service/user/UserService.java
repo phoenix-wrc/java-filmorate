@@ -2,14 +2,12 @@ package ru.yandex.practicum.filmorate.service.user;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.exceptions.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -22,26 +20,42 @@ public class UserService {
 
 	public boolean makeUsersFriends(int id, int friendId) {
 		User firstUser = storage.get(id);
+		if (firstUser == null) {
+			throw new UserNotFoundException("Первого пользователя нет");
+		}
 		User secondUser = storage.get(friendId);
-		firstUser.addFriend(secondUser);
-		secondUser.addFriend(firstUser);
-		return true;
+		if (secondUser == null) {
+			throw new UserNotFoundException("Второго пользователя нет");
+		}
+		boolean isFirstFriended = firstUser.addFriend(friendId);
+		if(!isFirstFriended) {
+			return isFirstFriended;
+		}
+		boolean isSecondFriended = secondUser.addFriend(id);
+		if (!isSecondFriended) {
+			firstUser.deleteFriend(friendId);
+			//log.debug("Второй друг не подружился, вот список его друзей: ", secondUser.getFriends() );
+			return isSecondFriended;
+		}
+		return isFirstFriended && isSecondFriended;
 	}
 
 	public boolean unfriend(int id, int friendId) {
 		User firstUser = storage.get(id);
 		User secondUser = storage.get(friendId);
-		boolean isDeletedFirst = firstUser.deleteFriend(friendId, secondUser);
-		boolean isDeletedSecond = secondUser.deleteFriend(id, firstUser);
-		return isDeletedFirst || isDeletedSecond;
+		boolean isDeletedFirst = firstUser.deleteFriend(friendId);
+		boolean isDeletedSecond = secondUser.deleteFriend(id);
+		return isDeletedFirst && isDeletedSecond;
 	}
 
-	public Set<Integer> friends(Integer id){
+	public List<User> friends(Integer id){
 		User user = storage.get(id);
-		return user.getFriends().keySet();
+		List<User> out = new ArrayList<>();
+		user.getFriends().forEach(idFriend -> out.add(this.getUser(idFriend)));
+		return out;
 	}
 
-	public List<User> users() {
+	public Collection<User> users() {
 		return storage.users();
 	}
 
@@ -53,12 +67,21 @@ public class UserService {
 		return storage.add(user);
 	}
 
-	public Set<Integer> getCommonFriends(int id, int otherId) {
+	public List<User> getCommonFriends(int id, int otherId) {
 		User firstUser = storage.get(id);
 		User secondUser = storage.get(otherId);
-		Map<Integer, User> out = new HashMap<>(firstUser.getFriends());
-		out.keySet().retainAll(secondUser.getFriends().keySet());
-		return out.keySet();
+		Set<Integer> firstSet = firstUser.getFriends();
+		List<Integer> secondSet = firstSet.stream().filter(
+				u -> secondUser.getFriends().contains(u)).collect(Collectors.toList());
+		List<User> out = new ArrayList<>();
+		secondSet.forEach(userId -> out.add(this.getUser(userId)));
+		return out;
+	}
+
+	public User getUser(Integer id) {
+		User out = storage.get(id);
+		if(out == null) { throw new UserNotFoundException("Нет такого пользователя"); }
+		return out;
 	}
 //	Будет отвечать за такие операции с пользователями, как добавление в друзья,
 //	удаление из друзей,

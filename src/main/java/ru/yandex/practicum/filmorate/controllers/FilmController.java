@@ -37,7 +37,7 @@ public class FilmController {
 
 	@GetMapping
 	public List<Film> films() {
-		log.debug("Количество фильмов перед добавлением: {}", films().size());
+		log.debug("Количество фильмов перед добавлением: {}", service.size());
 		return storage.films();
 	}
 }
