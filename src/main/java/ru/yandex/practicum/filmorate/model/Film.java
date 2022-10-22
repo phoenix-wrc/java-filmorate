@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.model;
 
 import lombok.Data;
+import ru.yandex.practicum.filmorate.exceptions.LikeNotFoundException;
 import ru.yandex.practicum.filmorate.validators.FilmReleaseDate;
 
 import javax.validation.constraints.*;
@@ -29,22 +30,26 @@ public class Film {
 //	@FilmDuration(message = "Должны быть проблемы при отрицательной длительности")
 	@Min(1)
 	private final Integer duration;
-	private Set<Integer> likes = new HashSet<>();
+	private Set<Integer> UsersLikes = new HashSet<>();
 
 	public Set<Integer> getLikes() {
-		return new HashSet<>(likes);
+		return new HashSet<>(UsersLikes);
 	}
 
 	public boolean addLike(Integer userId) {
-		return  likes.add(userId);
+		return  UsersLikes.add(userId);
 	}
 
 	public boolean removeLike(Integer userId) {
-		return  likes.remove(userId);
+		boolean isRemoved =  UsersLikes.remove(userId);
+		if (!isRemoved) {
+			throw new LikeNotFoundException("Лайк от пользователя " + userId + " не найден");
+		}
+		return isRemoved;
 	}
 
 	public Integer getCountOfLikes() {
-		return likes.size();
+		return UsersLikes.size();
 	}
 //	название не может быть пустым;
 //	максимальная длина описания — 200 символов;

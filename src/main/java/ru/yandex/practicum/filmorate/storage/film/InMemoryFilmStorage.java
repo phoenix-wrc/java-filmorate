@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.storage.film;
 
 import org.springframework.stereotype.Component;
+import ru.yandex.practicum.filmorate.exceptions.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 
@@ -15,7 +16,6 @@ public class InMemoryFilmStorage implements FilmStorage {
 	public InMemoryFilmStorage() {
 		currentFilmId = 1;
 		films = new HashMap<>();
-
 	}
 
 	@Override
@@ -24,32 +24,46 @@ public class InMemoryFilmStorage implements FilmStorage {
 		if (film.getId() == null) {
 			film = new Film(getNextId(), film.getName(), film.getDescription(), film.getReleaseDate(),
 					film.getDuration());
+		} else if (films.containsKey(film.getId())) {
+			throw new ValidationException("Фильм с таким ИД уже есть");
+		} else {
+			throw new ValidationException("Зачем передал фильм с ИД?");
 		}
-		return films.put(film.getId(), film);
+		Film out = films.put(film.getId(), film);
+		if (out != null) {
+			return out;
+		}
+		return film;
 	}
 
 	@Override
-	public Film delete(Film film) {
-		return films.remove(film.getId());
+	public Film delete(Integer id) {
+		return films.remove(id);
 	}
 
 	@Override
 	public Film patch(Film film) {
+		Film previousFilm;
 		if (films.containsKey(film.getId())) {
-			return films.put(film.getId(), film);
+			previousFilm = films.put(film.getId(), film);
 		} else {
-			throw new ValidationException("Такого фильма не было");
+			throw new FilmNotFoundException("Такого фильма не было");
 		}
+		return film;
 	}
 
 	@Override
-	public List<Film> films() {
-		return (List<Film>) films.values();
+	public Collection<Film> films() {
+		return films.values();
 	}
 
 	@Override
 	public Film getFilm(Integer id) {
-		return films.get(id);
+		Film out = films.get(id);
+		if(out == null) {
+			throw new FilmNotFoundException("Такого фильма не было");
+		}
+		return out;
 	}
 
 	public Integer size() {

@@ -19,7 +19,6 @@ public class InMemoryUserStorage implements UserStorage {
 		currentUserId = 1;
 	}
 
-
 	@Override
 	public User add(User user) {
 		if (user.getId() == null) {
