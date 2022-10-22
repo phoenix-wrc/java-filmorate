@@ -8,7 +8,9 @@ import java.util.Collection;
 @Component
 public interface FilmStorage {
 	Film add(Film film);
+
 	Film delete(Integer id);
+
 	Film patch(Film film);
 
 	Collection<Film> films();

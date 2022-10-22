@@ -11,8 +11,8 @@ import java.util.Map;
 
 @Component
 public class InMemoryUserStorage implements UserStorage {
-	private Integer currentUserId;
-	private final Map<Integer, User> users;
+	private Integer currentUserId; //Нумерователь пользователей
+	private final Map<Integer, User> users; //Хранилище
 
 	public InMemoryUserStorage() {
 		users = new HashMap<>();
@@ -27,7 +27,7 @@ public class InMemoryUserStorage implements UserStorage {
 			throw new ValidationException("Пользователь уже существует. ");
 		}
 		User out = users.put(user.getId(), user);
-		if(out != null) {
+		if (out != null) {
 			return out;
 			//Тут проверяем не было ли какого-то значения, хотя это не должно работать т.к. пробрасывется исключение
 		}
@@ -36,6 +36,7 @@ public class InMemoryUserStorage implements UserStorage {
 
 	@Override
 	public User delete(User user) {
+		//Вроде ненужный метод, но пусть пока будет
 		return users.remove(user.getId());
 	}
 
@@ -58,7 +59,7 @@ public class InMemoryUserStorage implements UserStorage {
 	@Override
 	public User get(Integer id) {
 		User out = users.get(id);
-		if(out == null) {
+		if (out == null) {
 			throw new UserNotFoundException("Пользователя нет такого");
 		}
 		return out;

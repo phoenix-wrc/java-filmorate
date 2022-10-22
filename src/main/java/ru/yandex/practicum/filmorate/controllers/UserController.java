@@ -49,17 +49,14 @@ public class UserController {
 		return out;
 	}
 
-//	PUT /users/{id}/friends/{friendId} — добавление в друзья.
 	@PutMapping("/{id}/friends/{friendId}")
-	public boolean addFriend(@PathVariable int id,
-	                      @PathVariable int friendId) {
-		log.debug("Сдружаем  пользователей: {}, {}" , id, friendId);
+	public boolean addFriend(@PathVariable int id, @PathVariable int friendId) {
+		log.debug("Сдружаем  пользователей: {}, {}", id, friendId);
 		return service.makeUsersFriends(id, friendId);
 	}
 
 	@DeleteMapping("/{id}/friends/{friendId}")
-	public boolean deleteFriend(@PathVariable int id,
-                             @PathVariable int friendId) {
+	public boolean deleteFriend(@PathVariable int id, @PathVariable int friendId) {
 		log.debug("Удаляем из друзей пользователя {}, пользователя: {}", id, friendId);
 		return service.unfriend(id, friendId);
 	}
@@ -69,9 +66,9 @@ public class UserController {
 		log.debug("Отдаем друзей пользователя: {}", id);
 		return service.friends(id);
 	}
+
 	@GetMapping("/{id}/friends/common/{otherId}")
-	public List<User> commonFriends(@PathVariable int id,
-	                                @PathVariable int otherId) {
+	public List<User> commonFriends(@PathVariable int id, @PathVariable int otherId) {
 		log.debug("Отдаем общих друзей пользователей: {}, {}", id, otherId);
 		return service.getCommonFriends(id, otherId);
 	}

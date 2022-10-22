@@ -7,7 +7,6 @@ import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,11 +32,9 @@ public class FilmService {
 
 	public List<Film> getTopFilms(Integer count) {
 		List<Film> out;
-		if(count > 0) {
-			out = storage.films().stream().sorted(Comparator.comparing(
-					Film::getCountOfLikes).reversed())
-					.limit(count).
-					collect(Collectors.toList());
+		if (count > 0) {
+			out = storage.films().stream().sorted(Comparator.comparing(Film::getCountOfLikes)
+					.reversed()).limit(count).collect(Collectors.toList());
 		} else {
 			throw new ValidationException("Параметр должен быть больше ноля");
 		}
@@ -67,11 +64,4 @@ public class FilmService {
 	public Film getFilm(Integer id) {
 		return storage.getFilm(id);
 	}
-
-//	будет отвечать за операции с фильмами, —
-//		добавление и удаление лайка,
-//		вывод 10 наиболее популярных фильмов по количеству лайков.
-//
-//	Пусть пока каждый пользователь может поставить лайк фильму только один раз.
-
 }
