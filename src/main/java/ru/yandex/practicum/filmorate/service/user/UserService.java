@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class UserService {
-	UserStorage storage;
+	private final UserStorage storage;
 
 	@Autowired
 	public UserService(UserStorage storage) {
@@ -47,7 +47,9 @@ public class UserService {
 		return isFirstFriended && isSecondFriended;
 	}
 
-	public boolean unfriend(int id, int friendId) {
+	//Строго говоря слова friend может быть переведен и как глагол дружить(со всеми вытекающими).
+	// Но используется в этом смысле очень редко так что думаем лучше)))
+	public boolean undoFriendship(int id, int friendId) {
 		User firstUser = storage.get(id);
 		if (firstUser == null) {
 			throw new UserNotFoundException("Первого пользователя нет");
@@ -62,7 +64,7 @@ public class UserService {
 		return isDeletedFirst && isDeletedSecond;
 	}
 
-	public List<User> friends(Integer id) {
+	public List<User> getAllFriends(Integer id) {
 		User user = storage.get(id);
 		if (user == null) {
 			throw new UserNotFoundException("Такого пользователя нет");

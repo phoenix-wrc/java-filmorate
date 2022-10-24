@@ -58,13 +58,13 @@ public class UserController {
 	@DeleteMapping("/{id}/friends/{friendId}")
 	public boolean deleteFriend(@PathVariable int id, @PathVariable int friendId) {
 		log.debug("Удаляем из друзей пользователя {}, пользователя: {}", id, friendId);
-		return service.unfriend(id, friendId);
+		return service.undoFriendship(id, friendId);
 	}
 
 	@GetMapping("/{id}/friends")
 	public List<User> allFriends(@PathVariable int id) {
 		log.debug("Отдаем друзей пользователя: {}", id);
-		return service.friends(id);
+		return service.getAllFriends(id);
 	}
 
 	@GetMapping("/{id}/friends/common/{otherId}")
