@@ -1,4 +1,4 @@
-package ru.yandex.practicum.filmorate.model;
+package ru.yandex.practicum.filmorate.model.user;
 
 import lombok.Data;
 import ru.yandex.practicum.filmorate.validators.NotContainSpace;
@@ -14,8 +14,8 @@ import java.util.Set;
 @Data
 public class User {
 	private final Integer id;
-
-	private Set<Integer> friends = new HashSet<>();
+    private Set<UsersFriendship> friendship;// = new HashSet<>();
+	private Set<Integer> friends;// = new HashSet<>();
 
 	@NotBlank(message = "Почта не должна быть из одних пробелов")
 	@Email(message = "Почта должно быть почтой")
@@ -30,10 +30,6 @@ public class User {
 
 	@PastOrPresent(message = "Дата рождения должна быть хотя б сегодня, или раньше")
 	private final LocalDate birthday;
-	public boolean addFriend(Integer user) {
-		return friends.add(user);
-	}
-
 	public String getName() {
 		if (name.isBlank() || name.isEmpty()) {
 			return login;
@@ -41,6 +37,9 @@ public class User {
 		return name;
 	}
 
+	public boolean addFriend(Integer user) {
+		return friends.add(user);
+	}
 
 	public Set<Integer> getFriends() {
 		return new HashSet<>(friends);
