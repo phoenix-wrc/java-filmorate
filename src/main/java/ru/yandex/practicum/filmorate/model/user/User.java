@@ -13,32 +13,36 @@ import java.util.Set;
 
 @Data
 public class User {
-	private final Integer id;
-    private Set<UsersFriendship> friendship;// = new HashSet<>();
-	private Set<Integer> friends;// = new HashSet<>();
+    @NotBlank(message = "Почта не должна быть из одних пробелов")
+    @Email(message = "Почта должно быть почтой")
+    private final String email;
+    @NotBlank(message = "Логин не должен быть пустым")
+    @NotContainSpace(message = "Логин не должен содержать пробелов")
+    private final String login;
+    @NotNull(message = "Не задалось имя")
+    private final String name;
+    @PastOrPresent(message = "Дата рождения должна быть хотя б сегодня, или раньше")
+    private final LocalDate birthday;
+	private Integer id;
+    private Set<Integer> friends;// = new HashSet<>();
 
-	@NotBlank(message = "Почта не должна быть из одних пробелов")
-	@Email(message = "Почта должно быть почтой")
-	private final String email;
+    public User(Integer nextId, String email, String login, String name, LocalDate birthday) {
+        this.id = nextId;
+        this.email = email;
+        this.login = login;
+        this.name = name;
+        this.birthday = birthday;
+    }
 
-	@NotBlank(message = "Логин не должен быть пустым")
-	@NotContainSpace(message = "Логин не должен содержать пробелов")
-	private final String login;
+    public String getName() {
+        if (name.isBlank() || name.isEmpty()) {
+            return login;
+        }
+        return name;
+    }
 
-	@NotNull(message = "Не задалось имя")
-	private final String name;
-
-	@PastOrPresent(message = "Дата рождения должна быть хотя б сегодня, или раньше")
-	private final LocalDate birthday;
-	public String getName() {
-		if (name.isBlank() || name.isEmpty()) {
-			return login;
-		}
-		return name;
-	}
-
-	public boolean addFriend(Integer user) {
-		return friends.add(user);
+    public boolean addFriend(Integer user) {
+        return friends.add(user);
 	}
 
 	public Set<Integer> getFriends() {

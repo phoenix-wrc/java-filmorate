@@ -1,8 +1,11 @@
 package ru.yandex.practicum.filmorate.model.film;
 
+import lombok.Builder;
 import lombok.Data;
 import ru.yandex.practicum.filmorate.exceptions.GenreNotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.LikeNotFoundException;
+import ru.yandex.practicum.filmorate.model.film.enums.GenreFilmEnum;
+import ru.yandex.practicum.filmorate.model.film.enums.MpaRatingEnum;
 import ru.yandex.practicum.filmorate.validators.FilmReleaseDate;
 
 import javax.validation.constraints.*;
@@ -11,6 +14,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Data
+@Builder
 public class Film {
 
 	private final Integer id;
@@ -28,8 +32,12 @@ public class Film {
 
 	@Min(1)
 	private final Integer duration;
-	private Set<Integer> UsersLikes = new HashSet<>();
-	private Set<GenreFilmEnum> genres = new HashSet<>();
+
+	@NotNull(message = "Рейтинг обязателен")
+	private final MpaRatingEnum mpaRating;
+
+	private Set<Integer> UsersLikes; // = new HashSet<>();
+	private Set<GenreFilmEnum> genres; // = new HashSet<>();
 
 	public Set<Integer> getLikes() {
 		return new HashSet<>(UsersLikes);

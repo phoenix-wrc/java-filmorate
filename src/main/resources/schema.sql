@@ -1,9 +1,14 @@
 CREATE TABLE IF NOT EXISTS filmorate_user
 (
-    user_login varchar
+    user_id
+    integer
+    PRIMARY
+    KEY,
+    user_login
+    varchar
 (
     20
-) PRIMARY KEY,
+) ,
     name varchar
 (
     50
@@ -17,16 +22,14 @@ CREATE TABLE IF NOT EXISTS filmorate_user
 
 CREATE TABLE IF NOT EXISTS filmorate_friendship
 (
-    from_user varchar
-(
-    20
-),
-    to_user varchar
-(
-    20
-),
-    status_id integer,
-    PRIMARY KEY
+    from_user
+    integer,
+    to_user
+    integer,
+    status_id
+    integer,
+    PRIMARY
+    KEY
 (
     from_user,
     to_user
@@ -142,25 +145,23 @@ CREATE TABLE IF NOT EXISTS filmorate_like
 (
     film_id
     integer,
-    user_login
-    varchar
-(
-    20
-),
-    PRIMARY KEY
+    user_id
+    integer,
+    PRIMARY
+    KEY
 (
     film_id,
-    user_login
+    user_id
 ),
     UNIQUE
 (
     film_id,
-    user_login
+    user_id
 )
     );
 
 ALTER TABLE filmorate_like
-    ADD FOREIGN KEY (user_login) REFERENCES filmorate_user (user_login);
+    ADD FOREIGN KEY (user_id) REFERENCES filmorate_user (user_id);
 
 ALTER TABLE filmorate_like
     ADD FOREIGN KEY (film_id) REFERENCES filmorate_film (film_id);
@@ -169,10 +170,10 @@ ALTER TABLE filmorate_film
     ADD FOREIGN KEY (rating_mpa) REFERENCES filmorate_mpa_rating (rating_id);
 
 ALTER TABLE filmorate_friendship
-    ADD FOREIGN KEY (from_user) REFERENCES filmorate_user (user_login);
+    ADD FOREIGN KEY (from_user) REFERENCES filmorate_user (user_id);
 
 ALTER TABLE filmorate_friendship
-    ADD FOREIGN KEY (to_user) REFERENCES filmorate_user (user_login);
+    ADD FOREIGN KEY (to_user) REFERENCES filmorate_user (user_id);
 
 ALTER TABLE filmorate_friendship
     ADD FOREIGN KEY (status_id) REFERENCES filmorate_friendship_status (status_id);

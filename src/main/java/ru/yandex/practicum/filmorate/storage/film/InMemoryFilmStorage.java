@@ -13,7 +13,7 @@ import java.util.Map;
 public class InMemoryFilmStorage implements FilmStorage {
 
 	private Integer currentFilmId; //Счетчик ИДишников фильма
-	private Map<Integer, Film> films; // Временное хранилище фильмы
+	private final Map<Integer, Film> films; // Временное хранилище фильмы
 
 	public InMemoryFilmStorage() {
 		currentFilmId = 1;
@@ -24,7 +24,14 @@ public class InMemoryFilmStorage implements FilmStorage {
 	public Film add(Film film) {
 		//Как я понимаю что бы всё заработало нужно сделать так, а потом нам объяснят как всё сделать правильно))
 		if (film.getId() == null) {
-			film = new Film(getNextId(), film.getName(), film.getDescription(), film.getReleaseDate(), film.getDuration());
+			film = Film.builder()
+					.id(getNextId())
+					.name(film.getName())
+					.description(film.getDescription())
+					.releaseDate(film.getReleaseDate())
+					.duration(film.getDuration())
+					.mpaRating(film.getMpaRating())
+					.build();
 		} else if (films.containsKey(film.getId())) {
 			throw new ValidationException("Фильм с таким ИД уже есть");
 		} else {
