@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.model.film;
 
 import org.springframework.jdbc.core.RowMapper;
-import ru.yandex.practicum.filmorate.model.film.enums.MpaRatingEnum;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,7 +17,7 @@ public class FilmMapper implements RowMapper<Film> {
                 .releaseDate(LocalDate.parse(rs.getString("RELEASE_DATE"),
                         LocalDateFormatter4FilmReleaseDate.getFormatter()))
                 .duration(rs.getInt("DURATION_MINUTES"))
-                .mpaRating(MpaRatingEnum.valueOf(rs.getString("RATING")))
+                .mpa(new MpaRating(rs.getInt("RATING_MPA"), rs.getString("RATING")))
                 .build();
     }
 }

@@ -2,16 +2,10 @@ package ru.yandex.practicum.filmorate.model.film;
 
 import lombok.Builder;
 import lombok.Data;
-import ru.yandex.practicum.filmorate.exceptions.GenreNotFoundException;
-import ru.yandex.practicum.filmorate.exceptions.LikeNotFoundException;
-import ru.yandex.practicum.filmorate.model.film.enums.GenreFilmEnum;
-import ru.yandex.practicum.filmorate.model.film.enums.MpaRatingEnum;
 import ru.yandex.practicum.filmorate.validators.FilmReleaseDate;
 
 import javax.validation.constraints.*;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
 
 @Data
 @Builder
@@ -34,43 +28,5 @@ public class Film {
 	private final Integer duration;
 
 	@NotNull(message = "Рейтинг обязателен")
-	private final MpaRatingEnum mpaRating;
-
-	private Set<Integer> UsersLikes; // = new HashSet<>();
-	private Set<GenreFilmEnum> genres; // = new HashSet<>();
-
-	public Set<Integer> getLikes() {
-		return new HashSet<>(UsersLikes);
-	}
-
-	public boolean addLike(Integer userId) {
-		return UsersLikes.add(userId);
-	}
-
-	public boolean removeLike(Integer userId) {
-		boolean isRemoved = UsersLikes.remove(userId);
-		if (!isRemoved) {
-			throw new LikeNotFoundException("Лайк от пользователя " + userId + " не найден");
-		}
-		return isRemoved;
-	}
-
-	public Set<GenreFilmEnum> getGenres() {
-		return new HashSet<>(genres);
-	}
-
-	public boolean addGenre(GenreFilmEnum genre) {
-		return genres.add(genre);
-	}
-
-	public boolean removeGenre(GenreFilmEnum genre) {
-		boolean isRemoved = genres.remove(genre);
-		if (!isRemoved) {
-			throw new GenreNotFoundException("Жанр " + genre + " не найден");
-		}
-		return isRemoved;
-	}
-	public Integer getCountOfLikes() {
-		return UsersLikes.size();
-	}
+	private final MpaRating mpa;
 }

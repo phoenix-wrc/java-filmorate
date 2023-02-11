@@ -1,20 +1,22 @@
-package ru.yandex.practicum.filmorate.storage.film;
+package ru.yandex.practicum.filmorate.storage.film.Impl;
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreatorFactory;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exceptions.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.model.film.Film;
 import ru.yandex.practicum.filmorate.model.film.FilmMapper;
+import ru.yandex.practicum.filmorate.model.film.GenresId;
 import ru.yandex.practicum.filmorate.model.film.LocalDateFormatter4FilmReleaseDate;
-import ru.yandex.practicum.filmorate.model.film.enums.GenreFilmEnum;
+import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.Types;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -35,49 +37,61 @@ public class FilmDbStorage implements FilmStorage {
     @Override
     public Film add(Film film) {
         String sql = "INSERT INTO FILMORATE_FILM " +
-                "(title, description, release_date, duration_minutes, rating_mpa) " +
-                "VALUES (?, ?, ?, ?, (SELECT RATING_ID FROM FILMORATE_MPA_RATING WHERE RATING=?))";
+                "(TITLE, DESCRIPTION, RELEASE_DATE, DURATION_MINUTES, RATING_MPA) " +
+                "VALUES (?, ?, ?, ?, ?)";
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcTemplate.update(
-                connection -> {
-                    PreparedStatement ps = connection.prepareStatement(sql, new String[]{"id"});
-                    ps.setString(1, film.getName());
-                    ps.setString(2, film.getDescription());
-                    ps.setString(3,
-                            film.getReleaseDate().format(LocalDateFormatter4FilmReleaseDate.getFormatter()));
-                    ps.setString(4, film.getDuration().toString());
-                    ps.setString(5, film.getMpaRating().toString());
-                    return ps;
-                },
+        var preparedStatementCreatorFactory = new PreparedStatementCreatorFactory( //{
+                sql, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.INTEGER, Types.INTEGER
+//            @Override
+//            public PreparedStatement createPreparedStatement(Connection connection) throws SQLException {
+//                PreparedStatement ps = connection.prepareStatement(sql);
+//                ps.setString(1, film.getName());
+//                ps.setString(2, film.getDescription());
+//                ps.setString(3,
+//                        film.getReleaseDate().format(LocalDateFormatter4FilmReleaseDate.getFormatter()));
+//                ps.setInt(4, film.getDuration());
+//                ps.setInt(5, film.getMpa().getId());
+//                return ps;
+//            }
+        );
+        preparedStatementCreatorFactory.setReturnGeneratedKeys(true);
+        var psc = preparedStatementCreatorFactory.newPreparedStatementCreator(
+                Arrays.asList(
+                        film.getName(),
+                        film.getDescription(),
+                        film.getReleaseDate().format(LocalDateFormatter4FilmReleaseDate.getFormatter()),
+                        film.getDuration(),
+                        film.getMpa().getId())
+        );
+        //};
+        // Решение из инета, но заработало как надо
+        int rowEffected = jdbcTemplate.update(psc,
                 keyHolder);
+        log.debug(keyHolder.getKeys().toString());
         Integer index;
         try {
-            index = keyHolder.getKey().intValue();
+            index = keyHolder.getKeyAs(Integer.class);
         } catch (NullPointerException e) {
             log.error("Новый ИД из базы не вернулся, дальше всё не будет работать");
             return film; //Незнаю что возвращать. Можно рефакторнуть и в сигнатурах задать возвращение опшинала, но потом
         }
         // Отдельно инсертим в свои таблицы жанры
-        Set<GenreFilmEnum> genres = film.getGenres();
-        for (GenreFilmEnum g : genres) {
-            jdbcTemplate.update("INSERT INTO FILMORATE_FILM_GENRE (GENRE_ID, FILM_ID) " +
-                    "VALUES ((SELECT GENRE_ID FROM FILMORATE_GENRE WHERE GENRE=?), ?)", g.toString(), index
-            );
-        }
-        // И инсертим лайки, это же новые деньги
-        Set<Integer> likes = film.getLikes();
-        for (Integer i : likes) {
-            jdbcTemplate.update("INSERT INTO FILMORATE_LIKE (FILM_ID, USER_ID) " +
-                    "VALUES (?, ?)", index, i
-            );
-        }
+//        Set<GenresId> genres = film.getGenres();
+//        for (GenresId g : genres) {
+//            jdbcTemplate.update("INSERT INTO FILMORATE_FILM_GENRE (GENRE_ID, FILM_ID) " +
+//                    "VALUES (?, ?)", g.getId(), index
+//            );
+//        }
         return getFilm(index);
     }
 
     @Override
     public Film delete(Integer id) {
-        String sql = "delete from FILMORATE_FILM where FILM_ID = ?";
+        String sql = "DELETE FROM FILMORATE_LIKE WHERE FILM_ID = ?; " +
+                "DELETE FROM FILMORATE_FILM_GENRE WHERE FILM_ID = ?;" +
+                "DELETE FROM FILMORATE_FILM WHERE FILM_ID = ?  ";
+        //Пока так, можно переделать каскадом но нужно еще почитать доку к БД
         Film out = getFilm(id);
         int deleteRow = jdbcTemplate.update(sql, id);
         if (deleteRow == 1) {
@@ -95,12 +109,11 @@ public class FilmDbStorage implements FilmStorage {
     public Film patch(Film film) {
         String sql = "UPDATE FILMORATE_FILM " +
                 "SET " +
-                "TITLE = '?', " +
-                "DESCRIPTION = '?', " +
-                "RELEASE_DATE = '?', " +
+                "TITLE = ?, " +
+                "DESCRIPTION = ?, " +
+                "RELEASE_DATE = ?, " +
                 "DURATION_MINUTES = ?, " +
-                "RATING_MPA = (" +
-                "SELECT RATING_ID FROM FILMORATE_MPA_RATING WHERE RATING = '?') " +
+                "RATING_MPA = ? " +
                 "WHERE FILM_ID = ?";
 
         int patchRow = jdbcTemplate.update(sql,
@@ -108,7 +121,7 @@ public class FilmDbStorage implements FilmStorage {
                 film.getDescription(),
                 film.getReleaseDate().format(LocalDateFormatter4FilmReleaseDate.getFormatter()),
                 film.getDuration(),
-                film.getMpaRating().toString(),
+                film.getMpa().getId(),
                 film.getId()
         );
 
@@ -130,9 +143,10 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Collection<Film> films() {
-        String sql = "select film.FILM_ID, film.TITLE, film.DESCRIPTION, film.RELEASE_DATE, film.DURATION_MINUTES," +
-                "mpa.RATING from FILMORATE_FILM as film join FILMORATE_MPA_RATING as mpa" +
-                " ON film.RATING_MPA = mpa.RATING_ID";
+        String sql = "SELECT film.FILM_ID, film.TITLE, film.DESCRIPTION, film.RELEASE_DATE, film.DURATION_MINUTES," +
+                "film.RATING_MPA, mpa.RATING FROM FILMORATE_FILM AS film " +
+                "JOIN FILMORATE_MPA_RATING AS mpa " +
+                "ON film.RATING_MPA = mpa.RATING_ID";
         List<Film> films = jdbcTemplate.query(sql, new FilmMapper());
 
         if (films.isEmpty()) {
@@ -151,8 +165,10 @@ public class FilmDbStorage implements FilmStorage {
     @Override
     public Film getFilm(Integer id) {
         String sql = "SELECT film.FILM_ID, film.TITLE, film.DESCRIPTION, film.RELEASE_DATE, film.DURATION_MINUTES," +
-                "mpa.RATING FROM FILMORATE_FILM AS film JOIN FILMORATE_MPA_RATING AS mpa" +
-                " ON film.RATING_MPA = mpa.RATING_ID WHERE film.FILM_ID = ?";
+                "film.RATING_MPA, mpa.RATING FROM FILMORATE_FILM AS film " +
+                "JOIN FILMORATE_MPA_RATING AS mpa " +
+                "ON film.RATING_MPA = mpa.RATING_ID " +
+                "WHERE film.FILM_ID = ?";
         Film film = jdbcTemplate.queryForObject(sql, new FilmMapper(), id);
         //Основную работу делает ФилмМапер
         if (film == null) {
@@ -161,8 +177,8 @@ public class FilmDbStorage implements FilmStorage {
         } else {
             log.info("Найден фильм: {} {}", film.getId(), film.getName());
         }
-        film.setGenres(getGenres(id));
-        film.setUsersLikes(getLikes(id));
+//        film.setGenres(getGenres(id));
+//        film.setUsersLikes(getLikes(id));
         return film;
     }
 
@@ -178,7 +194,8 @@ public class FilmDbStorage implements FilmStorage {
     private Set<Integer> getLikes(Integer filmId) {
         //Тут тоже всё просто
         String sql = "SELECT USER_ID FROM FILMORATE_LIKE WHERE FILM_ID = ?";
-        List<Integer> filmLikes = jdbcTemplate.query(sql, ResultSet::getInt, filmId);
+        List<Integer> filmLikes = jdbcTemplate.query(sql, (resultSet, columnIndex) ->
+                resultSet.getInt("USER_ID"), filmId);
         if (filmLikes == null) {
             log.error("При получении лайков что-то пошло не так");
         }
@@ -186,15 +203,12 @@ public class FilmDbStorage implements FilmStorage {
         return Set.copyOf(filmLikes);
     }
 
-    private Set<GenreFilmEnum> getGenres(Integer filmId) {
+    private Set<GenresId> getGenres(Integer filmId) {
         // Тут вроде всё просто
-        String sql = "SELECT FG.GENRE FROM FILMORATE_FILM_GENRE AS FFG " +
-                "JOIN FILMORATE_GENRE AS FG " +
-                "ON FFG.GENRE_ID = FG.GENRE_ID " +
+        String sql = "SELECT FFG.GENRE_ID FROM FILMORATE_FILM_GENRE AS FFG " +
                 "WHERE FFG.FILM_ID = ?";
-        List<GenreFilmEnum> genres = this.jdbcTemplate.query(sql, (rs, rowNum) -> {
-            return GenreFilmEnum.fromValue(rs.getString("GENRE"));
-        }, filmId);
+        List<GenresId> genres = this.jdbcTemplate.query(sql, (rs, rowNum) ->
+                new GenresId(rs.getInt("GENRE_ID")), filmId);
         if (genres == null) {
             log.error("При получении жанров что-то пошло не так");
         }

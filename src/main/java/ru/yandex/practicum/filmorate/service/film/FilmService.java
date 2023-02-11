@@ -3,43 +3,35 @@ package ru.yandex.practicum.filmorate.service.film;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exceptions.ValidationException;
 import ru.yandex.practicum.filmorate.model.film.Film;
+import ru.yandex.practicum.filmorate.storage.film.FilmLikeStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class FilmService {
 	private final FilmStorage storage;
+	private final FilmLikeStorage likeStorage;
 
 	@Autowired
-	public FilmService(@Qualifier("FilmBDStorage") FilmStorage storage) {
+	public FilmService(@Qualifier("FilmBDStorage") FilmStorage storage,
+					   @Qualifier("FilmLikeBDStorage") FilmLikeStorage likeStorage) {
 		this.storage = storage;
+		this.likeStorage = likeStorage;
 	}
 
 	public boolean addLikeToFilm(Integer idFilm, Integer userId) {
-		Film f = storage.getFilm(idFilm);
-		return f.addLike(userId);
+		return likeStorage.addLike(idFilm, userId);
 	}
 
 	public boolean removeLikeFromFilm(Integer idFilm, Integer userId) {
-		Film f = storage.getFilm(idFilm);
-		return f.removeLike(userId);
+		return likeStorage.removeLike(idFilm, userId);
 	}
 
 	public List<Film> getTopFilms(Integer count) {
-		List<Film> out;
-		if (count > 0) {
-			out = storage.films().stream().sorted(Comparator.comparing(Film::getCountOfLikes)
-					.reversed()).limit(count).collect(Collectors.toList());
-		} else {
-			throw new ValidationException("Параметр должен быть больше ноля");
-		}
-		return out;
+		return likeStorage.getTopFilms(count);
 	}
 
 	public Film add(Film film) {

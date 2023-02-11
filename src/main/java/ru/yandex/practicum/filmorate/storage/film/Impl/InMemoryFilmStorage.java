@@ -1,9 +1,10 @@
-package ru.yandex.practicum.filmorate.storage.film;
+package ru.yandex.practicum.filmorate.storage.film.Impl;
 
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exceptions.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidationException;
 import ru.yandex.practicum.filmorate.model.film.Film;
+import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -30,7 +31,7 @@ public class InMemoryFilmStorage implements FilmStorage {
 					.description(film.getDescription())
 					.releaseDate(film.getReleaseDate())
 					.duration(film.getDuration())
-					.mpaRating(film.getMpaRating())
+					.mpa(film.getMpa())
 					.build();
 		} else if (films.containsKey(film.getId())) {
 			throw new ValidationException("Фильм с таким ИД уже есть");

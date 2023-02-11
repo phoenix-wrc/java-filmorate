@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS filmorate_user
 (
     user_id
-    integer
+        IDENTITY
     PRIMARY
     KEY,
     user_login
@@ -150,36 +150,36 @@ CREATE TABLE IF NOT EXISTS filmorate_like
     PRIMARY
     KEY
 (
-    film_id,
-    user_id
-),
+ film_id,
+ user_id
+    ),
     UNIQUE
-(
-    film_id,
-    user_id
-)
-    );
+        (
+         film_id,
+         user_id
+            )
+);
 
 ALTER TABLE filmorate_like
-    ADD FOREIGN KEY (user_id) REFERENCES filmorate_user (user_id);
+    ADD FOREIGN KEY (user_id) REFERENCES filmorate_user (user_id) ON DELETE CASCADE;
 
 ALTER TABLE filmorate_like
-    ADD FOREIGN KEY (film_id) REFERENCES filmorate_film (film_id);
+    ADD FOREIGN KEY (film_id) REFERENCES filmorate_film (film_id) ON DELETE CASCADE;
 
 ALTER TABLE filmorate_film
-    ADD FOREIGN KEY (rating_mpa) REFERENCES filmorate_mpa_rating (rating_id);
+    ADD FOREIGN KEY (rating_mpa) REFERENCES filmorate_mpa_rating (rating_id) ON DELETE CASCADE;
 
 ALTER TABLE filmorate_friendship
-    ADD FOREIGN KEY (from_user) REFERENCES filmorate_user (user_id);
+    ADD FOREIGN KEY (from_user) REFERENCES filmorate_user (user_id) ON DELETE CASCADE;
 
 ALTER TABLE filmorate_friendship
-    ADD FOREIGN KEY (to_user) REFERENCES filmorate_user (user_id);
+    ADD FOREIGN KEY (to_user) REFERENCES filmorate_user (user_id) ON DELETE CASCADE;
 
 ALTER TABLE filmorate_friendship
-    ADD FOREIGN KEY (status_id) REFERENCES filmorate_friendship_status (status_id);
+    ADD FOREIGN KEY (status_id) REFERENCES filmorate_friendship_status (status_id) ON DELETE CASCADE;
 
 ALTER TABLE filmorate_film_genre
-    ADD FOREIGN KEY (film_id) REFERENCES filmorate_film (film_id);
+    ADD FOREIGN KEY (film_id) REFERENCES filmorate_film (film_id) ON DELETE CASCADE;
 
 ALTER TABLE filmorate_film_genre
-    ADD FOREIGN KEY (genre_id) REFERENCES filmorate_genre (genre_id);
+    ADD FOREIGN KEY (genre_id) REFERENCES filmorate_genre (genre_id) ON DELETE CASCADE;
