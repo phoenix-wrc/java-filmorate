@@ -5,6 +5,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class GenresId {
+public class Genre {
     private Integer id;
+    private String name;
 }

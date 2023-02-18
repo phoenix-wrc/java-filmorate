@@ -43,7 +43,7 @@ public class InMemoryFilmLikeStorage implements FilmLikeStorage {
             return likes.get(filmId).add(userId);
         } else {
             var returning = likes.put(filmId, Set.of(userId));
-            if (returning.contains(userId)) {
+            if (returning == null && returning.contains(userId)) {
                 return true;
             } else {
                 throw new FilmNotFoundException("Непонятная ошибка");

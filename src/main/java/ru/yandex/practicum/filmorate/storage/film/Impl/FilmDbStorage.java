@@ -11,15 +11,12 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exceptions.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.model.film.Film;
 import ru.yandex.practicum.filmorate.model.film.FilmMapper;
-import ru.yandex.practicum.filmorate.model.film.GenresId;
+import ru.yandex.practicum.filmorate.model.film.Genre;
 import ru.yandex.practicum.filmorate.model.film.LocalDateFormatter4FilmReleaseDate;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.sql.Types;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 
 @Slf4j
@@ -43,17 +40,6 @@ public class FilmDbStorage implements FilmStorage {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         var preparedStatementCreatorFactory = new PreparedStatementCreatorFactory( //{
                 sql, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.INTEGER, Types.INTEGER
-//            @Override
-//            public PreparedStatement createPreparedStatement(Connection connection) throws SQLException {
-//                PreparedStatement ps = connection.prepareStatement(sql);
-//                ps.setString(1, film.getName());
-//                ps.setString(2, film.getDescription());
-//                ps.setString(3,
-//                        film.getReleaseDate().format(LocalDateFormatter4FilmReleaseDate.getFormatter()));
-//                ps.setInt(4, film.getDuration());
-//                ps.setInt(5, film.getMpa().getId());
-//                return ps;
-//            }
         );
         preparedStatementCreatorFactory.setReturnGeneratedKeys(true);
         var psc = preparedStatementCreatorFactory.newPreparedStatementCreator(
@@ -68,21 +54,24 @@ public class FilmDbStorage implements FilmStorage {
         // Решение из инета, но заработало как надо
         int rowEffected = jdbcTemplate.update(psc,
                 keyHolder);
-        log.debug(keyHolder.getKeys().toString());
         Integer index;
         try {
             index = keyHolder.getKeyAs(Integer.class);
+            log.debug("Сохранили фильм с индексом {}", index);
         } catch (NullPointerException e) {
             log.error("Новый ИД из базы не вернулся, дальше всё не будет работать");
             return film; //Незнаю что возвращать. Можно рефакторнуть и в сигнатурах задать возвращение опшинала, но потом
         }
-        // Отдельно инсертим в свои таблицы жанры
-//        Set<GenresId> genres = film.getGenres();
-//        for (GenresId g : genres) {
-//            jdbcTemplate.update("INSERT INTO FILMORATE_FILM_GENRE (GENRE_ID, FILM_ID) " +
-//                    "VALUES (?, ?)", g.getId(), index
-//            );
-//        }
+//         Отдельно инсертим в свои таблицы жанры
+        Set<Genre> genres = film.getGenres();
+        if (genres != null && !genres.isEmpty()) {
+            for (Genre g : genres) {
+                jdbcTemplate.update("INSERT INTO FILMORATE_FILM_GENRE (GENRE_ID, FILM_ID) " +
+                        "VALUES (?, ?)", g.getId(), index
+                );
+            }
+        }
+
         return getFilm(index);
     }
 
@@ -124,18 +113,34 @@ public class FilmDbStorage implements FilmStorage {
                 film.getMpa().getId(),
                 film.getId()
         );
+        if (patchRow == 1) {
+            log.debug("Обновлен фильм с ИД " + film.getId());
+        } else if (patchRow > 1) {
+            log.error("Обновлено больше одного фильма по ИД" + film.getId());
+        } else if (patchRow == 0) {
+            log.error("Ни одного фильма по ИД {} не обновилось", film.getId());
+            throw new FilmNotFoundException("Не нашлось фильма с таким ИД для обновления");
+        }
+
+        // Что бы поработать с жанрами нужно получается их сначало удалить а потом снова добавить.
+        // В теории можно использовать мердж, но не понятно тогда как удалить если жанр убрали.
+
+        Set<Genre> genres = film.getGenres();
+        if (genres != null && !genres.isEmpty()) {
+            jdbcTemplate.update("DELETE FROM FILMORATE_FILM_GENRE " +
+                    "WHERE FILM_ID = ?", film.getId());
+
+            for (Genre g : genres) {
+                jdbcTemplate.update("INSERT INTO FILMORATE_FILM_GENRE (GENRE_ID, FILM_ID) " +
+                        "VALUES (?, ?)", g.getId(), film.getId()
+                );
+            }
+        }
 
         Film out = getFilm(film.getId());
-        if (patchRow == 1) {
-            log.debug("Обновлен фильм с ИД " + out.getId());
-        } else if (patchRow > 1) {
-            log.error("Обновлено больше одного фильма по ИД" + film);
-        } else if (out == null) {
+        if (out == null) {
             log.error("Из базы не вернулся фильм при обновлении фильма " + film.getId());
             throw new FilmNotFoundException("Не нашлось фильма после обновления");
-        } else if (patchRow == 0) {
-            log.error("Ни одного фильма по ИД" + film + "не обновилось");
-            throw new FilmNotFoundException("Не нашлось фильма с таким ИД для обновления");
         }
         //Логирую всё что могу, хотя не думаю что это хорошо
         return out;
@@ -148,17 +153,15 @@ public class FilmDbStorage implements FilmStorage {
                 "JOIN FILMORATE_MPA_RATING AS mpa " +
                 "ON film.RATING_MPA = mpa.RATING_ID";
         List<Film> films = jdbcTemplate.query(sql, new FilmMapper());
+        for (Film f : films) {
+            f.setGenres(getGenres(f.getId()));
+        }
 
         if (films.isEmpty()) {
             log.debug("Фильмов нет");
-            throw new FilmNotFoundException("Фильмов нет");
         } else {
             log.debug("Найдено {} фильмов", films.size());
         }
-        // Пока не знаю как в таком формате "всунуть" лайки и жанры в фильмы, только если дублировать код
-        // Да и два сценария где это потребуется лучше сделать через отдельные методы.
-        // Если потребуются фильмы по жанрам, проще выгрузку отдельную делать чем перебирать жанры всех фильмов
-        // Фильмы лайкнутые конкретным пользователем тоже лучше отдельно выгружать
         return films;
     }
 
@@ -177,8 +180,7 @@ public class FilmDbStorage implements FilmStorage {
         } else {
             log.info("Найден фильм: {} {}", film.getId(), film.getName());
         }
-//        film.setGenres(getGenres(id));
-//        film.setUsersLikes(getLikes(id));
+        film.setGenres(getGenres(id));
         return film;
     }
 
@@ -191,29 +193,19 @@ public class FilmDbStorage implements FilmStorage {
         return filmCount;
     }
 
-    private Set<Integer> getLikes(Integer filmId) {
-        //Тут тоже всё просто
-        String sql = "SELECT USER_ID FROM FILMORATE_LIKE WHERE FILM_ID = ?";
-        List<Integer> filmLikes = jdbcTemplate.query(sql, (resultSet, columnIndex) ->
-                resultSet.getInt("USER_ID"), filmId);
-        if (filmLikes == null) {
-            log.error("При получении лайков что-то пошло не так");
-        }
-        log.debug("Забрали лайки у фильма {}", filmId);
-        return Set.copyOf(filmLikes);
-    }
-
-    private Set<GenresId> getGenres(Integer filmId) {
+    private Set<Genre> getGenres(Integer filmId) {
         // Тут вроде всё просто
-        String sql = "SELECT FFG.GENRE_ID FROM FILMORATE_FILM_GENRE AS FFG " +
+        String sql = "SELECT FFG.GENRE_ID, FG.GENRE " +
+                "FROM FILMORATE_FILM_GENRE AS FFG " +
+                "JOIN FILMORATE_GENRE AS FG on FG.GENRE_ID = FFG.GENRE_ID " +
                 "WHERE FFG.FILM_ID = ?";
-        List<GenresId> genres = this.jdbcTemplate.query(sql, (rs, rowNum) ->
-                new GenresId(rs.getInt("GENRE_ID")), filmId);
-        if (genres == null) {
-            log.error("При получении жанров что-то пошло не так");
-        }
+        List<Genre> genres = this.jdbcTemplate.query(sql, (rs, rowNum) -> {
+            return new Genre(rs.getInt("GENRE_ID"), rs.getString("GENRE"));
+        }, filmId);
+        //Пишут что метод квери не может возвращать нулы так что проверки не требуется
         if (genres.isEmpty()) {
             log.error("Жанров нет, и это ошибка так как такого не должно быть");
+            return Collections.emptySet();
         }
         log.debug("Забрали жанры у фильма {}", filmId);
         return Set.copyOf(genres);

@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.errorhandlers;
 
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -30,5 +31,11 @@ public class FilmServiceErrorHandler {
 	@ResponseStatus(HttpStatus.NOT_FOUND)
 	public Map<String, String> notFoundLikeException(final LikeNotFoundException e) {
 		return Map.of("Лайк не найден", e.getMessage());
+	}
+
+	@ExceptionHandler(value = EmptyResultDataAccessException.class)
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	public Map<String, String> notFoundLikeException(final EmptyResultDataAccessException e) {
+		return Map.of("Не корректный ИД ", "Фильмов не вернулось");
 	}
 }

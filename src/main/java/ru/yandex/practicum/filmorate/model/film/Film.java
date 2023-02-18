@@ -6,6 +6,7 @@ import ru.yandex.practicum.filmorate.validators.FilmReleaseDate;
 
 import javax.validation.constraints.*;
 import java.time.LocalDate;
+import java.util.Set;
 
 @Data
 @Builder
@@ -27,6 +28,8 @@ public class Film {
 	@Min(1)
 	private final Integer duration;
 
-	@NotNull(message = "Рейтинг обязателен")
-	private final MpaRating mpa;
+    @NotNull(message = "Рейтинг обязателен")
+    private final MpaRating mpa;
+    //	@Setter
+    private Set<Genre> genres;
 }
