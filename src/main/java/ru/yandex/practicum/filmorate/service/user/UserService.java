@@ -1,78 +1,36 @@
 package ru.yandex.practicum.filmorate.service.user;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exceptions.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.user.User;
+import ru.yandex.practicum.filmorate.storage.user.UserFriendshipStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class UserService {
 	private final UserStorage storage;
+	private final UserFriendshipStorage friendshipStorage;
 
 	@Autowired
-	public UserService(UserStorage storage) {
+	public UserService(UserStorage storage,
+					   @Qualifier("InMemoryUserFriendshipStorage") UserFriendshipStorage friendshipStorage) {
 		this.storage = storage;
-	}
-
-	public boolean makeUsersFriends(int id, int friendId) {
-		User firstUser = storage.get(id);
-		if (firstUser == null) {
-			throw new UserNotFoundException("Первого пользователя нет");
-		}
-		User secondUser = storage.get(friendId);
-		if (secondUser == null) {
-			throw new UserNotFoundException("Второго пользователя нет");
-		}
-		//Взяли двух пользователей, теперь будем их дружить
-		boolean isFirstFriended = firstUser.addFriend(friendId);
-		if (!isFirstFriended) {
-			//Если что-то не так ломаем выполнение
-			return isFirstFriended;
-		}
-		boolean isSecondFriended = secondUser.addFriend(id);
-		if (!isSecondFriended) {
-			//На всякий случай удаляем первое добавление.
-			firstUser.deleteFriend(friendId);
-			//И ломаем выполнение
-			return isSecondFriended;
-		}
-		//Может просто заменить на тру, но будет непонятно. Вообще не уверен, что булевые значения стоит возвращать
-		return isFirstFriended && isSecondFriended;
+		this.friendshipStorage = friendshipStorage;
 	}
 
 	//Строго говоря слова friend может быть переведен и как глагол дружить(со всеми вытекающими).
 	// Но используется в этом смысле очень редко так что думаем лучше)))
 	public boolean undoFriendship(int id, int friendId) {
-		User firstUser = storage.get(id);
-		if (firstUser == null) {
-			throw new UserNotFoundException("Первого пользователя нет");
-		}
-		User secondUser = storage.get(friendId);
-		if (secondUser == null) {
-			throw new UserNotFoundException("Второго пользователя нет");
-		}
-		boolean isDeletedFirst = firstUser.deleteFriend(friendId);
-		boolean isDeletedSecond = secondUser.deleteFriend(id);
-		//Тут если что-то не так то пофиг
-		return isDeletedFirst && isDeletedSecond;
+		return true;
 	}
 
-	public List<User> getAllFriends(Integer id) {
-		User user = storage.get(id);
-		if (user == null) {
-			throw new UserNotFoundException("Такого пользователя нет");
-		}
-		List<User> out = new ArrayList<>();
-		// Делаю тут т.к. фроде собирать друзей это не функционал хранилища.
-		user.getFriends().forEach(idFriend -> out.add(this.getUser(idFriend)));
-		return out;
+	public boolean makeUsersFriends(int id, int friendId) {
+		return true;
 	}
 
 	public Collection<User> users() {
@@ -90,22 +48,8 @@ public class UserService {
 		return storage.add(user);
 	}
 
-	public List<User> getCommonFriends(int id, int otherId) {
-		User firstUser = storage.get(id);
-		if (firstUser == null) {
-			throw new UserNotFoundException("Первого пользователя нет");
-		}
-		User secondUser = storage.get(otherId);
-		if (secondUser == null) {
-			throw new UserNotFoundException("Второго пользователя нет");
-		}
-		//Вроде так работает
-		Set<Integer> firstSet = firstUser.getFriends();
-		List<Integer> secondSet = firstSet.stream().filter(u ->
-				secondUser.getFriends().contains(u)).collect(Collectors.toList());
-		List<User> out = new ArrayList<>();
-		secondSet.forEach(userId -> out.add(this.getUser(userId)));
-		return out;
+	public List<User> getCommonFriends(Integer id, Integer otherId) {
+		return friendshipStorage.getCommonFriends(id, otherId);
 	}
 
 	public User getUser(Integer id) {
@@ -114,5 +58,9 @@ public class UserService {
 			throw new UserNotFoundException("Нет такого пользователя");
 		}
 		return out;
+	}
+
+	public List<User> getAllFriends(Integer id) {
+		return friendshipStorage.getAllFriends(id);
 	}
 }

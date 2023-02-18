@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.storage.user.impl;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exceptions.UserNotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidationException;
@@ -10,7 +11,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-@Component
+@Component("InMemoryUserStorage")
+@Qualifier("InMemoryUserStorage")
 public class InMemoryUserStorage implements UserStorage {
 	private Integer currentUserId; //Нумерователь пользователей
 	private final Map<Integer, User> users; //Хранилище

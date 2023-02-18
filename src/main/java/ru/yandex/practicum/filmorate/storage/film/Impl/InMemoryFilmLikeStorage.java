@@ -10,10 +10,7 @@ import ru.yandex.practicum.filmorate.model.film.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmLikeStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -42,7 +39,7 @@ public class InMemoryFilmLikeStorage implements FilmLikeStorage {
         if (likes.containsKey(filmId)) {
             return likes.get(filmId).add(userId);
         } else {
-            var returning = likes.put(filmId, Set.of(userId));
+            var returning = likes.put(filmId, new HashSet<>(Set.of(userId)));
             if (returning == null && returning.contains(userId)) {
                 return true;
             } else {

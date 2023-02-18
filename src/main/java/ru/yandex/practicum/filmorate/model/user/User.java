@@ -8,8 +8,6 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PastOrPresent;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
 
 @Data
 public class User {
@@ -24,7 +22,6 @@ public class User {
     @PastOrPresent(message = "Дата рождения должна быть хотя б сегодня, или раньше")
     private final LocalDate birthday;
 	private Integer id;
-    private Set<Integer> friends;// = new HashSet<>();
 
     public User(Integer nextId, String email, String login, String name, LocalDate birthday) {
         this.id = nextId;
@@ -40,16 +37,4 @@ public class User {
         }
         return name;
     }
-
-    public boolean addFriend(Integer user) {
-        return friends.add(user);
-	}
-
-	public Set<Integer> getFriends() {
-		return new HashSet<>(friends);
-	}
-
-	public boolean deleteFriend(Integer user) {
-		return friends.remove(user);
-	}
 }
