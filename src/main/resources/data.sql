@@ -19,13 +19,6 @@ MERGE INTO filmorate_mpa_rating (rating_id, rating)
            (5, 'NC-17')
 -- ON CONFLICT(rating) DO NOTHING
 ;
--- Заполняем статусы дружбы
-MERGE INTO filmorate_friendship_status (status_id, status_name)
-    VALUES (1, 'REQUESTED'),
-           (2, 'APPROVED'),
-           (3, 'REJECTED')
-;
--- ON CONFLICT(status_name) DO NOTHING
 
 
 

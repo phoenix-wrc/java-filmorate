@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import ru.yandex.practicum.filmorate.exceptions.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.model.film.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmLikeStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
@@ -73,7 +74,7 @@ public class FilmLikeBDStorage implements FilmLikeStorage {
         int row = jdbcTemplate.update(sql, filmId, userId);
         if (row == 0) {
             log.error("Лайк от пользователя {} к фильму {} не удалился", userId, filmId);
-            return false;
+            throw new FilmNotFoundException("Лайк от пользователя userId к фильму filmId не удалился");
         } else if (row > 1) {
             log.error("Лайков от пользователя {} к фильму {} удалилось слишком много ", userId, filmId);
             return false;

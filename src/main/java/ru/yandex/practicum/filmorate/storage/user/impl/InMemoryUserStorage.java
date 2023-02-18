@@ -25,8 +25,14 @@ public class InMemoryUserStorage implements UserStorage {
 	@Override
 	public User add(User user) {
 		if (user.getId() == null) {
-			user = new User(getNextId(), user.getEmail(), user.getLogin(), user.getName(), user.getBirthday());
-		} else if (users.containsKey(user.getId())) {
+            user = User.builder()
+                    .id(getNextId())
+                    .email(user.getEmail())
+                    .login(user.getLogin())
+                    .name(user.getName())
+                    .birthday(user.getBirthday())
+                    .build();
+        } else if (users.containsKey(user.getId())) {
 			throw new ValidationException("Пользователь уже существует. ");
 		}
 		User out = users.put(user.getId(), user);

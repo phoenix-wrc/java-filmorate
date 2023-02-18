@@ -17,20 +17,18 @@ public class UserService {
 	private final UserFriendshipStorage friendshipStorage;
 
 	@Autowired
-	public UserService(UserStorage storage,
-					   @Qualifier("InMemoryUserFriendshipStorage") UserFriendshipStorage friendshipStorage) {
+	public UserService(@Qualifier("UserBDStorage") UserStorage storage,
+					   @Qualifier("UserFriendshipBDStorage") UserFriendshipStorage friendshipStorage) {
 		this.storage = storage;
 		this.friendshipStorage = friendshipStorage;
 	}
 
-	//Строго говоря слова friend может быть переведен и как глагол дружить(со всеми вытекающими).
-	// Но используется в этом смысле очень редко так что думаем лучше)))
-	public boolean undoFriendship(int id, int friendId) {
-		return true;
+	public boolean undoFriendship(Integer fromId, Integer toId) {
+		return friendshipStorage.undoFriendship(fromId, toId);
 	}
 
-	public boolean makeUsersFriends(int id, int friendId) {
-		return true;
+	public boolean makeUsersFriends(Integer fromId, Integer toId) {
+		return friendshipStorage.makeUsersFriends(fromId, toId);
 	}
 
 	public Collection<User> users() {

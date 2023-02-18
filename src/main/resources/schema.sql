@@ -1,32 +1,28 @@
 CREATE TABLE IF NOT EXISTS filmorate_user
 (
     user_id
-        IDENTITY
-    PRIMARY
-    KEY,
+             INTEGER
+        GENERATED
+            BY
+            DEFAULT AS
+            IDENTITY
+        PRIMARY
+            KEY,
     user_login
-    varchar
-(
-    20
-) ,
-    name varchar
-(
-    50
-),
+             varchar(20),
+    name     varchar(50),
     birthday date,
     email varchar
 (
     50
 )
-    );
+);
 
 CREATE TABLE IF NOT EXISTS filmorate_friendship
 (
     from_user
     integer,
     to_user
-    integer,
-    status_id
     integer,
     PRIMARY
     KEY
@@ -40,21 +36,6 @@ CREATE TABLE IF NOT EXISTS filmorate_friendship
     to_user
 )
     );
-
-CREATE TABLE IF NOT EXISTS filmorate_friendship_status
-(
-    status_id
-    INTEGER
-    GENERATED
-    BY
-    DEFAULT AS
-    IDENTITY
-    PRIMARY
-    KEY,
-    status_name
-    varchar
-    UNIQUE
-);
 
 CREATE TABLE IF NOT EXISTS filmorate_film
 (
@@ -174,9 +155,6 @@ ALTER TABLE filmorate_friendship
 
 ALTER TABLE filmorate_friendship
     ADD FOREIGN KEY (to_user) REFERENCES filmorate_user (user_id) ON DELETE CASCADE;
-
-ALTER TABLE filmorate_friendship
-    ADD FOREIGN KEY (status_id) REFERENCES filmorate_friendship_status (status_id) ON DELETE CASCADE;
 
 ALTER TABLE filmorate_film_genre
     ADD FOREIGN KEY (film_id) REFERENCES filmorate_film (film_id) ON DELETE CASCADE;

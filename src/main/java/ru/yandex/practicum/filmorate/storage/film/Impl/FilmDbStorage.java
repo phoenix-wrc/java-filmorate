@@ -18,7 +18,6 @@ import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import java.sql.Types;
 import java.util.*;
 
-
 @Slf4j
 @Component("FilmBDStorage")
 @Qualifier("FilmBDStorage")
