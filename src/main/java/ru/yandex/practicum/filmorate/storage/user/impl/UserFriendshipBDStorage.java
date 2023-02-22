@@ -12,6 +12,7 @@ import ru.yandex.practicum.filmorate.model.user.UserMapper;
 import ru.yandex.practicum.filmorate.storage.user.UserFriendshipStorage;
 
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component("UserFriendshipBDStorage")
@@ -25,7 +26,7 @@ public class UserFriendshipBDStorage implements UserFriendshipStorage {
     }
 
     @Override
-    public boolean makeUsersFriends(Integer fromId, Integer toId) {
+    public Optional<Integer> makeUsersFriends(Integer fromId, Integer toId) {
         String sql = "INSERT INTO FILMORATE_FRIENDSHIP (FROM_USER, TO_USER) VALUES (?, ?)";
 
         int rowEffected;
@@ -33,19 +34,14 @@ public class UserFriendshipBDStorage implements UserFriendshipStorage {
             rowEffected = jdbcTemplate.update(sql, fromId, toId);
         } catch (DataAccessException e) {
             log.error("Некорректный вводные данные {}, {}", fromId, toId);
-            throw new UserNotFoundException("Некорректный вводные данные " + fromId + " или " + toId);
+            return Optional.empty();
         }
-        if (rowEffected == 1) {
-            log.debug("добавли дружбу от {} к {}", fromId, toId);
-            return true;
-        } else {
-            log.error("Что-то между дружбой от {} к {} не так", fromId, toId);
-            return false;
-        }
+        return Optional.of(rowEffected);
+        // Ошибки и проверки будут в сервисе
     }
 
     @Override
-    public List<User> getCommonFriends(Integer fromId, Integer toId) {
+    public List<Optional<User>> getCommonFriends(Integer fromId, Integer toId) {
         String sql = "SELECT friendship.TO_USER AS USER_ID, " +
                 "FU.USER_LOGIN, " +
                 "FU.NAME, " +
@@ -66,18 +62,14 @@ public class UserFriendshipBDStorage implements UserFriendshipStorage {
                 "FU.NAME, FU.BIRTHDAY, " +
                 "FU.EMAIL " +
                 "HAVING COUNT(TO_USER) > 1";
-        List<User> users = jdbcTemplate.query(sql, new UserMapper(), fromId, toId);
-
-        if (users.isEmpty()) {
-            log.debug("Пользователей нет");
-        } else {
-            log.debug("Найдено {} пользователей", users.size());
-        }
-        return users;
+        List<Optional<User>> query = jdbcTemplate.query(sql, new UserMapper(), fromId, toId);
+        log.debug("Найдено {} пользователей", query.size());
+        return query;
+        // Ошибки и проверки будут в сервисе
     }
 
     @Override
-    public List<User> getAllFriends(Integer id) {
+    public List<Optional<User>> getAllFriends(Integer id) {
         String sql = "SELECT USER_ID, " +
                 "USER_LOGIN, " +
                 "NAME, " +
@@ -86,19 +78,13 @@ public class UserFriendshipBDStorage implements UserFriendshipStorage {
                 "FROM FILMORATE_USER " +
                 "JOIN FILMORATE_FRIENDSHIP FF on FILMORATE_USER.USER_ID = FF.TO_USER " +
                 "WHERE FROM_USER = ?  ";
-        List<User> users = jdbcTemplate.query(sql, new UserMapper(), id);
-
-        if (users.isEmpty()) {
-            log.debug("Пользователей нет");
-        } else {
-            log.debug("Найдено {} пользователей", users.size());
-        }
-
+        List<Optional<User>> users = jdbcTemplate.query(sql, new UserMapper(), id);
+        log.debug("Найдено {} пользователей", users.size());
         return users;
     }
 
     @Override
-    public boolean undoFriendship(Integer fromId, Integer toId) {
+    public Boolean undoFriendship(Integer fromId, Integer toId) {
         String sql = "DELETE FROM FILMORATE_FRIENDSHIP WHERE FROM_USER = ? AND TO_USER = ?";
         //Вроде каскад прописан, должно и так работать
         int deleteRow;

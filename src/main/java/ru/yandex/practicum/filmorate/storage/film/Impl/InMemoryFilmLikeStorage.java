@@ -26,9 +26,11 @@ public class InMemoryFilmLikeStorage implements FilmLikeStorage {
 
 
     @Override
-    public Set<Integer> getLikes(Integer filmId) {
+    public Set<Optional<Integer>> getLikes(Integer filmId) {
         if (likes.containsKey(filmId)) {
-            return Set.copyOf(likes.get(filmId));
+            return Set.copyOf(likes.get(filmId)).stream()
+                    .map(Optional::of)
+                    .collect(Collectors.toSet());
         } else {
             return Collections.emptySet();
         }
@@ -39,8 +41,8 @@ public class InMemoryFilmLikeStorage implements FilmLikeStorage {
         if (likes.containsKey(filmId)) {
             return likes.get(filmId).add(userId);
         } else {
-            var returning = likes.put(filmId, new HashSet<>(Set.of(userId)));
-            if (returning == null && returning.contains(userId)) {
+            var returning = Optional.ofNullable(likes.put(filmId, new HashSet<>(Set.of(userId))));
+            if (returning.isPresent() && returning.get().contains(userId)) {
                 return true;
             } else {
                 throw new FilmNotFoundException("Непонятная ошибка");
@@ -59,13 +61,13 @@ public class InMemoryFilmLikeStorage implements FilmLikeStorage {
         if (!isRemoved) {
             throw new LikeNotFoundException("Лайк от пользователя " + userId + " не найден");
         }
-        return isRemoved;
+        return true;
     }
 
     @Override
-    public List<Film> getTopFilms(Integer count) {
+    public List<Optional<Film>> getTopFilms(Integer count) {
         // Так как метод завязан на лайки логично хранить его тут
-        List<Film> out;
+        List<Optional<Film>> out;
         if (count > 0) {
             out = likes.entrySet().stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().size()))

@@ -19,6 +19,7 @@ import java.sql.Types;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component("UserBDStorage")
@@ -32,7 +33,7 @@ public class UserBDStorage implements UserStorage {
     }
 
     @Override
-    public User add(User user) {
+    public Optional<User> add(User user) {
         String sql = "INSERT INTO FILMORATE_USER " +
                 "(USER_LOGIN, NAME, BIRTHDAY, EMAIL) " +
                 "VALUES (?, ?, ?, ?)";
@@ -57,18 +58,17 @@ public class UserBDStorage implements UserStorage {
             log.debug("Сохранили юзера с индексом {}", index);
         } catch (NullPointerException e) {
             log.error("Новый ИД из базы не вернулся, дальше всё не будет работать");
-            return user; //Незнаю что возвращать. Можно рефакторнуть и в сигнатурах задать возвращение опшинала,
-            // но потом
+            return Optional.empty();
         }
         return get(index);
     }
 
     @Override
-    public User delete(User user) {
+    public Optional<User> delete(User user) {
         Integer id = user.getId();
         String sql = "DELETE FROM FILMORATE_USER WHERE USER_ID = ?";
         //Вроде каскад прописан, должно и так работать
-        User out = get(id);
+        Optional<User> out = get(id);
         int deleteRow = jdbcTemplate.update(sql, id);
         if (deleteRow == 1) {
             log.debug("Удален пользователь с ИД {}", id);
@@ -82,7 +82,7 @@ public class UserBDStorage implements UserStorage {
     }
 
     @Override
-    public User patch(User user) {
+    public Optional<User> patch(User user) {
         String sql = "UPDATE FILMORATE_USER " +
                 "SET " +
                 "USER_LOGIN = ?, " +
@@ -104,20 +104,20 @@ public class UserBDStorage implements UserStorage {
             log.error("Обновлено больше одного пользователя по ИД {}", user.getId());
         } else if (patchRow == 0) {
             log.error("Ни одного пользователя по ИД {} не обновилось", user.getId());
-            throw new UserNotFoundException("Не нашлось фильма с таким ИД для обновления");
+            throw new UserNotFoundException("Не нашлось фильма с таким ИД для обновления: " + user.getId());
         }
         return this.get(user.getId());
     }
 
     @Override
-    public Collection<User> users() {
+    public Collection<Optional<User>> users() {
         String sql = "SELECT USER_ID, " +
                 "USER_LOGIN, " +
                 "NAME, " +
                 "BIRTHDAY, " +
                 "EMAIL " +
                 "FROM FILMORATE_USER ";
-        List<User> users = jdbcTemplate.query(sql, new UserMapper());
+        List<Optional<User>> users = jdbcTemplate.query(sql, new UserMapper());
 
         if (users.isEmpty()) {
             log.debug("Пользователей нет");
@@ -129,7 +129,7 @@ public class UserBDStorage implements UserStorage {
     }
 
     @Override
-    public User get(Integer id) {
+    public Optional<User> get(Integer id) {
         String sql = "SELECT USER_ID, " +
                 "USER_LOGIN, " +
                 "NAME, " +
@@ -137,15 +137,15 @@ public class UserBDStorage implements UserStorage {
                 "EMAIL " +
                 "FROM FILMORATE_USER " +
                 "WHERE USER_ID = ?";
-        User user;
+        Optional<User> user;
         try {
             user = jdbcTemplate.queryForObject(sql, new UserMapper(), id);
         } catch (EmptyResultDataAccessException e) {
             log.info("Пользователь с идентификатором {} не найден.", id);
-            throw new UserNotFoundException("Что то пошло не так");
+            throw new UserNotFoundException("Пользователь с идентификатором " + id + " не найден");
         }
         //Основную работу делает Мапер
-        log.info("Найден Пользователь: {} {}", user.getId(), user.getName());
+        log.info("Найден Пользователь: {}", id);
         return user;
     }
 }

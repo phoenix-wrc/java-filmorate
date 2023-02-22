@@ -11,12 +11,14 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exceptions.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.model.film.Film;
 import ru.yandex.practicum.filmorate.model.film.FilmMapper;
-import ru.yandex.practicum.filmorate.model.film.Genre;
 import ru.yandex.practicum.filmorate.model.film.LocalDateFormatter4FilmReleaseDate;
+import ru.yandex.practicum.filmorate.storage.film.FilmGenresStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.sql.Types;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Optional;
 
 @Slf4j
 @Component("FilmBDStorage")
@@ -24,14 +26,17 @@ import java.util.*;
 public class FilmDbStorage implements FilmStorage {
     @NonNull
     private final JdbcTemplate jdbcTemplate;
+    private final FilmGenresStorage genresStorage;
 
-    public FilmDbStorage(JdbcTemplate jdbcTemplate) {
+    public FilmDbStorage(@NonNull JdbcTemplate jdbcTemplate,
+                         @NonNull FilmGenresStorage genresStorage) {
         this.jdbcTemplate = jdbcTemplate;
+        this.genresStorage = genresStorage;
     }
 
     //Эти классы будут DAO — объектами доступа к данным
     @Override
-    public Film add(Film film) {
+    public Optional<Film> add(Film film) {
         String sql = "INSERT INTO FILMORATE_FILM " +
                 "(TITLE, DESCRIPTION, RELEASE_DATE, DURATION_MINUTES, RATING_MPA) " +
                 "VALUES (?, ?, ?, ?, ?)";
@@ -59,28 +64,20 @@ public class FilmDbStorage implements FilmStorage {
             log.debug("Сохранили фильм с индексом {}", index);
         } catch (NullPointerException e) {
             log.error("Новый ИД из базы не вернулся, дальше всё не будет работать");
-            return film; //Незнаю что возвращать. Можно рефакторнуть и в сигнатурах задать возвращение опшинала, но потом
+            return Optional.empty(); //Незнаю что возвращать. Можно рефакторнуть и в сигнатурах задать возвращение опшинала, но потом
         }
 //         Отдельно инсертим в свои таблицы жанры
-        Set<Genre> genres = film.getGenres();
-        if (genres != null && !genres.isEmpty()) {
-            for (Genre g : genres) {
-                jdbcTemplate.update("INSERT INTO FILMORATE_FILM_GENRE (GENRE_ID, FILM_ID) " +
-                        "VALUES (?, ?)", g.getId(), index
-                );
-            }
-        }
-
+        genresStorage.setGenresToFilm(film.getGenres(), index);
         return getFilm(index);
     }
 
     @Override
-    public Film delete(Integer id) {
+    public Optional<Film> delete(Integer id) {
         String sql = "DELETE FROM FILMORATE_LIKE WHERE FILM_ID = ?; " +
                 "DELETE FROM FILMORATE_FILM_GENRE WHERE FILM_ID = ?;" +
                 "DELETE FROM FILMORATE_FILM WHERE FILM_ID = ?  ";
         //Пока так, можно переделать каскадом но нужно еще почитать доку к БД
-        Film out = getFilm(id);
+        Optional<Film> out = getFilm(id);
         int deleteRow = jdbcTemplate.update(sql, id);
         if (deleteRow == 1) {
             log.debug("Удален фильм с ИД " + id);
@@ -88,13 +85,13 @@ public class FilmDbStorage implements FilmStorage {
             log.error("Удалилось больше одного фильма по ИД" + id);
         } else if (deleteRow == 0) {
             log.error("Ни одного фильма по ИД" + id + "не удалилось");
-            throw new FilmNotFoundException("Нет фильма стаким ИД для удаления");
+            return Optional.empty();
         }
         return out;
     }
 
     @Override
-    public Film patch(Film film) {
+    public Optional<Film> patch(Film film) {
         String sql = "UPDATE FILMORATE_FILM " +
                 "SET " +
                 "TITLE = ?, " +
@@ -121,93 +118,37 @@ public class FilmDbStorage implements FilmStorage {
             throw new FilmNotFoundException("Не нашлось фильма с таким ИД для обновления");
         }
 
-        // Что бы поработать с жанрами нужно получается их сначало удалить а потом снова добавить.
-        // В теории можно использовать мердж, но не понятно тогда как удалить если жанр убрали.
-
-        Set<Genre> genres = film.getGenres();
-        if (genres != null && !genres.isEmpty()) {
-            jdbcTemplate.update("DELETE FROM FILMORATE_FILM_GENRE " +
-                    "WHERE FILM_ID = ?", film.getId());
-
-            for (Genre g : genres) {
-                jdbcTemplate.update("INSERT INTO FILMORATE_FILM_GENRE (GENRE_ID, FILM_ID) " +
-                        "VALUES (?, ?)", g.getId(), film.getId()
-                );
-            }
-        }
-
-        Film out = getFilm(film.getId());
-        if (out == null) {
-            log.error("Из базы не вернулся фильм при обновлении фильма " + film.getId());
-            throw new FilmNotFoundException("Не нашлось фильма после обновления");
-        }
-        //Логирую всё что могу, хотя не думаю что это хорошо
-        return out;
+        return getFilm(film.getId());
     }
 
     @Override
-    public Collection<Film> films() {
+    public Collection<Optional<Film>> films() {
         String sql = "SELECT film.FILM_ID, film.TITLE, film.DESCRIPTION, film.RELEASE_DATE, film.DURATION_MINUTES," +
                 "film.RATING_MPA, mpa.RATING FROM FILMORATE_FILM AS film " +
                 "JOIN FILMORATE_MPA_RATING AS mpa " +
                 "ON film.RATING_MPA = mpa.RATING_ID";
-        List<Film> films = jdbcTemplate.query(sql, new FilmMapper());
-        for (Film f : films) {
-            f.setGenres(getGenres(f.getId()));
-        }
 
-        if (films.isEmpty()) {
-            log.debug("Фильмов нет");
-        } else {
-            log.debug("Найдено {} фильмов", films.size());
-        }
-        return films;
+        return jdbcTemplate.query(sql, new FilmMapper());
     }
 
     @Override
-    public Film getFilm(Integer id) {
+    public Optional<Film> getFilm(Integer id) {
         String sql = "SELECT film.FILM_ID, film.TITLE, film.DESCRIPTION, film.RELEASE_DATE, film.DURATION_MINUTES," +
                 "film.RATING_MPA, mpa.RATING FROM FILMORATE_FILM AS film " +
                 "JOIN FILMORATE_MPA_RATING AS mpa " +
                 "ON film.RATING_MPA = mpa.RATING_ID " +
                 "WHERE film.FILM_ID = ?";
-        Film film = jdbcTemplate.queryForObject(sql, new FilmMapper(), id);
         //Основную работу делает ФилмМапер
-        if (film == null) {
-            log.info("Пользователь с идентификатором {} не найден.", id);
-            throw new FilmNotFoundException("Что то пошло не так");
-        } else {
-            log.info("Найден фильм: {} {}", film.getId(), film.getName());
-        }
-        film.setGenres(getGenres(id));
-        return film;
+        return jdbcTemplate.queryForObject(sql, new FilmMapper(), id);
     }
 
     @Override
-    public Integer size() {
+    public Optional<Integer> size() {
         // Тут проде всё просто, считаем уоличество записей целиком. Можно ограничится подсчетом Идешников
         String sql = "SELECT Count(FILM_ID) FROM FILMORATE_FILM";
         Integer filmCount = jdbcTemplate.queryForObject(sql, Integer.class);
         log.info("Найдено фильмов: {}", filmCount);
-        return filmCount;
-    }
-
-    private Set<Genre> getGenres(Integer filmId) {
-        // Тут вроде всё просто
-        String sql = "SELECT FFG.GENRE_ID, FG.GENRE " +
-                "FROM FILMORATE_FILM_GENRE AS FFG " +
-                "JOIN FILMORATE_GENRE AS FG on FG.GENRE_ID = FFG.GENRE_ID " +
-                "WHERE FFG.FILM_ID = ?";
-        List<Genre> genres = this.jdbcTemplate.query(sql, (rs, rowNum) -> {
-            return new Genre(rs.getInt("GENRE_ID"), rs.getString("GENRE"));
-        }, filmId);
-        //Пишут что метод квери не может возвращать нулы так что проверки не требуется
-        if (genres.isEmpty()) {
-            log.error("Жанров нет, и это ошибка так как такого не должно быть");
-            return Collections.emptySet();
-        }
-        log.debug("Забрали жанры у фильма {}", filmId);
-        return Set.copyOf(genres);
+        return Optional.ofNullable(filmCount);
     }
 }
 

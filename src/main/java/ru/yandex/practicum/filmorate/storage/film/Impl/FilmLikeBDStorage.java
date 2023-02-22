@@ -10,8 +10,8 @@ import ru.yandex.practicum.filmorate.model.film.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmLikeStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,18 +27,18 @@ public class FilmLikeBDStorage implements FilmLikeStorage {
     FilmStorage storage;
 
     public FilmLikeBDStorage(@NonNull JdbcTemplate jdbcTemplate
-            , @Qualifier("FilmBDStorage") FilmStorage storage
+            , @Qualifier("FilmBDStorage") @NonNull FilmStorage storage
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.storage = storage;
     }
 
     @Override
-    public Set<Integer> getLikes(Integer filmId) {
+    public Set<Optional<Integer>> getLikes(Integer filmId) {
         //Тут тоже всё просто
         String sql = "SELECT USER_ID FROM FILMORATE_LIKE WHERE FILM_ID = ?";
-        List<Integer> filmLikes = jdbcTemplate.query(sql, (resultSet, columnIndex) ->
-                resultSet.getInt("USER_ID"), filmId);
+        List<Optional<Integer>> filmLikes = jdbcTemplate.query(sql, (resultSet, columnIndex) ->
+                Optional.of(resultSet.getInt("USER_ID")), filmId);
         //Пишут что метод квери не может возвращать нулы так что проверки не требуется
         log.debug("Забрали лайки у фильма {}", filmId);
         return Set.copyOf(filmLikes);
@@ -87,7 +87,7 @@ public class FilmLikeBDStorage implements FilmLikeStorage {
     }
 
     @Override
-    public List<Film> getTopFilms(Integer count) {
+    public List<Optional<Film>> getTopFilms(Integer count) {
         String sql = "SELECT film.FILM_ID " +
                 "FROM FILMORATE_FILM AS film " +
                 "LEFT JOIN FILMORATE_LIKE AS likes " +
@@ -101,7 +101,7 @@ public class FilmLikeBDStorage implements FilmLikeStorage {
 
         if (filmsId.isEmpty()) {
             log.debug("Популярных фильмов нет");
-            return Collections.emptyList();
+            return List.of(Optional.empty());
         } else {
             log.debug("Найдено популярных {} фильмов", filmsId.size());
         }

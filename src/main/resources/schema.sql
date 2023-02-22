@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS filmorate_friendship
 CREATE TABLE IF NOT EXISTS filmorate_film
 (
     film_id
-    INTEGER
+                     INTEGER
     GENERATED
     BY
     DEFAULT AS
@@ -48,26 +48,20 @@ CREATE TABLE IF NOT EXISTS filmorate_film
     PRIMARY
     KEY,
     title
-    varchar
-(
-    50
-),
-    description varchar
-(
-    200
-),
-    release_date date,
+                     varchar(50),
+    description      varchar(200),
+    release_date     date,
     duration_minutes integer,
-    rating_mpa integer,
-    UNIQUE
-(
-    title,
-    description,
-    release_date,
-    duration_minutes,
-    rating_mpa
-)
-    );
+    rating_mpa       integer--,
+--     UNIQUE
+-- (
+--     title,
+--     description,
+--     release_date,
+--     duration_minutes,
+--     rating_mpa
+-- )
+);
 
 CREATE TABLE IF NOT EXISTS filmorate_film_genre
 (

@@ -4,13 +4,13 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.exceptions.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.model.film.MpaRating;
 import ru.yandex.practicum.filmorate.storage.film.FilmMpaRatingStorage;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -23,31 +23,25 @@ public class FilmBDMpaRatingStorage implements FilmMpaRatingStorage {
     }
 
     @Override
-    public List<MpaRating> ratings() {
+    public List<Optional<MpaRating>> ratings() {
         //Тут тоже всё просто
-        String sql = "SELECT RATING_ID, RATING FROM FILMORATE_MPA_RATING";
-        List<MpaRating> ratings = jdbcTemplate.query(sql, this::getRating);
+        String sql = "SELECT RATING_ID, RATING FROM FILMORATE_MPA_RATING " +
+                " ORDER BY RATING_ID ";
+        List<Optional<MpaRating>> ratings = jdbcTemplate.query(sql, this::getRating);
         //Пишут что метод квери не может возвращать нулы так что проверки не требуется
         log.debug("Забрали все рэйтинги");
         return ratings;
     }
 
     @Override
-    public MpaRating rating(Integer id) {
+    public Optional<MpaRating> rating(Integer id) {
         String sql = "SELECT * FROM FILMORATE_MPA_RATING " +
                 "WHERE RATING_ID = ?";
-        MpaRating rating = jdbcTemplate.queryForObject(sql, this::getRating, id);
-        if (rating == null) {
-            log.info("Рэйтинг с идентификатором {} не найден.", id);
-            throw new FilmNotFoundException("Что то пошло не так");
-        } else {
-            log.info("Найден рейтинг: {} {}", rating.getId(), rating.getName());
-        }
-        return rating;
+        return jdbcTemplate.queryForObject(sql, this::getRating, id);
     }
 
-    private MpaRating getRating(ResultSet rs, int rowNum) throws SQLException {
-        return new MpaRating(
-                rs.getInt("RATING_ID"), rs.getString("RATING"));
+    private Optional<MpaRating> getRating(ResultSet rs, int rowNum) throws SQLException {
+        return Optional.of(new MpaRating(
+                rs.getInt("RATING_ID"), rs.getString("RATING")));
     }
 }
