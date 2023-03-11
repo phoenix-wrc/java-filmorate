@@ -28,7 +28,9 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public Optional<User> add(User user) {
-        if (user != null && user.getId() == null) {
+        if (user == null) {
+            return Optional.empty();
+        } else if (user.getId() == null) {
             user = User.builder()
                     .id(getNextId())
                     .email(user.getEmail())
@@ -43,9 +45,9 @@ public class InMemoryUserStorage implements UserStorage {
     }
 
     @Override
-    public Optional<User> delete(User user) {
+    public Optional<User> delete(Integer user) {
         //Вроде ненужный метод, но пусть пока будет
-        return Optional.ofNullable(users.remove(user.getId()));
+        return Optional.ofNullable(users.remove(user));
     }
 
     @Override

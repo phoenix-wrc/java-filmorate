@@ -8,7 +8,7 @@ import java.util.Optional;
 public interface UserStorage {
     Optional<User> add(User user);
 
-    Optional<User> delete(User user);
+    Optional<User> delete(Integer user);
 
     Optional<User> patch(User user);
 

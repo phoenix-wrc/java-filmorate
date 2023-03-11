@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.storage.film.Impl;
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.film.Genre;
@@ -16,7 +17,8 @@ import java.util.Set;
 
 
 @Slf4j
-@Component
+@Component("FilmGenresStorageImpl")
+@Qualifier("FilmGenresStorageImpl")
 public class FilmGenresStorageImpl implements FilmGenresStorage {
     @NonNull
     private final JdbcTemplate jdbcTemplate;

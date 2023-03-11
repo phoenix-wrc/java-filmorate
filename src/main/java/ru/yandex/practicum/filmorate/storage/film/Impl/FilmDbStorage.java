@@ -3,15 +3,16 @@ package ru.yandex.practicum.filmorate.storage.film.Impl;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreatorFactory;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exceptions.FilmNotFoundException;
+import ru.yandex.practicum.filmorate.model.LocalDateFormatter4Date;
 import ru.yandex.practicum.filmorate.model.film.Film;
 import ru.yandex.practicum.filmorate.model.film.FilmMapper;
-import ru.yandex.practicum.filmorate.model.film.LocalDateFormatter4FilmReleaseDate;
 import ru.yandex.practicum.filmorate.storage.film.FilmGenresStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
@@ -29,6 +30,7 @@ public class FilmDbStorage implements FilmStorage {
     private final FilmGenresStorage genresStorage;
 
     public FilmDbStorage(@NonNull JdbcTemplate jdbcTemplate,
+                         @Qualifier("FilmGenresStorageImpl")
                          @NonNull FilmGenresStorage genresStorage) {
         this.jdbcTemplate = jdbcTemplate;
         this.genresStorage = genresStorage;
@@ -50,7 +52,7 @@ public class FilmDbStorage implements FilmStorage {
                 Arrays.asList(
                         film.getName(),
                         film.getDescription(),
-                        film.getReleaseDate().format(LocalDateFormatter4FilmReleaseDate.getFormatter()),
+                        film.getReleaseDate().format(LocalDateFormatter4Date.getFormatter()),
                         film.getDuration(),
                         film.getMpa().getId())
         );
@@ -104,7 +106,7 @@ public class FilmDbStorage implements FilmStorage {
         int patchRow = jdbcTemplate.update(sql,
                 film.getName(),
                 film.getDescription(),
-                film.getReleaseDate().format(LocalDateFormatter4FilmReleaseDate.getFormatter()),
+                film.getReleaseDate().format(LocalDateFormatter4Date.getFormatter()),
                 film.getDuration(),
                 film.getMpa().getId(),
                 film.getId()
@@ -139,16 +141,26 @@ public class FilmDbStorage implements FilmStorage {
                 "ON film.RATING_MPA = mpa.RATING_ID " +
                 "WHERE film.FILM_ID = ?";
         //Основную работу делает ФилмМапер
-        return jdbcTemplate.queryForObject(sql, new FilmMapper(), id);
+        try {
+            return jdbcTemplate.queryForObject(sql, new FilmMapper(), id);
+        } catch (IllegalStateException | EmptyResultDataAccessException e) {
+            log.error("Не найден фильм по ИД: {}. Детали {}", id, e.getMessage());
+            return Optional.empty();
+        }
     }
 
     @Override
     public Optional<Integer> size() {
         // Тут проде всё просто, считаем уоличество записей целиком. Можно ограничится подсчетом Идешников
         String sql = "SELECT Count(FILM_ID) FROM FILMORATE_FILM";
-        Integer filmCount = jdbcTemplate.queryForObject(sql, Integer.class);
-        log.info("Найдено фильмов: {}", filmCount);
-        return Optional.ofNullable(filmCount);
+        try {
+            Integer filmCount = jdbcTemplate.queryForObject(sql, Integer.class);
+            log.info("Найдено фильмов: {}", filmCount);
+            return Optional.ofNullable(filmCount);
+        } catch (IllegalStateException | EmptyResultDataAccessException e) {
+            log.error("Ошибка при вычислении количества записей в таблице фильм. Детали {}", e.getMessage());
+            return Optional.empty();
+        }
     }
 }
 

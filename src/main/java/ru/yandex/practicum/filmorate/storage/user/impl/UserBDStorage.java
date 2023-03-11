@@ -3,23 +3,21 @@ package ru.yandex.practicum.filmorate.storage.user.impl;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreatorFactory;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.exceptions.UserNotFoundException;
-import ru.yandex.practicum.filmorate.model.film.LocalDateFormatter4FilmReleaseDate;
+import ru.yandex.practicum.filmorate.model.LocalDateFormatter4Date;
 import ru.yandex.practicum.filmorate.model.user.User;
 import ru.yandex.practicum.filmorate.model.user.UserMapper;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.sql.Types;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Component("UserBDStorage")
@@ -34,6 +32,10 @@ public class UserBDStorage implements UserStorage {
 
     @Override
     public Optional<User> add(User user) {
+        if (user == null) { // Чекаем чо как
+            log.error("Пришел нулл для созранения в БД");
+            return Optional.empty();
+        }
         String sql = "INSERT INTO FILMORATE_USER " +
                 "(USER_LOGIN, NAME, BIRTHDAY, EMAIL) " +
                 "VALUES (?, ?, ?, ?)";
@@ -47,42 +49,63 @@ public class UserBDStorage implements UserStorage {
                 Arrays.asList(
                         user.getLogin(),
                         user.getName(),
-                        user.getBirthday().format(LocalDateFormatter4FilmReleaseDate.getFormatter()),
+                        user.getBirthday().format(LocalDateFormatter4Date.getFormatter()),
                         user.getEmail()
                 ));
         // Решение из инета, но заработало как надо
-        int rowEffected = jdbcTemplate.update(psc, keyHolder);
-        Integer index;
         try {
+            int rowEffected = jdbcTemplate.update(psc, keyHolder);
+            Integer index;
             index = keyHolder.getKeyAs(Integer.class);
             log.debug("Сохранили юзера с индексом {}", index);
+            return get(index);
         } catch (NullPointerException e) {
             log.error("Новый ИД из базы не вернулся, дальше всё не будет работать");
             return Optional.empty();
+        } catch (BadSqlGrammarException badSqlGrammarException) {
+            log.error("Проблемы с БД. Детали: \n" + badSqlGrammarException.getMessage());
+            return Optional.empty();
+        } catch (DataAccessException e) {
+            log.error("Проблемы с самой БД, детали: " + e.getMessage());
+            return Optional.empty();
         }
-        return get(index);
     }
 
     @Override
-    public Optional<User> delete(User user) {
-        Integer id = user.getId();
+    public Optional<User> delete(Integer user) {
+        if (user == null) { // Чекаем чо как
+            log.error("Пришел нулл для удаления из БД");
+            return Optional.empty();
+        }
         String sql = "DELETE FROM FILMORATE_USER WHERE USER_ID = ?";
         //Вроде каскад прописан, должно и так работать
-        Optional<User> out = get(id);
-        int deleteRow = jdbcTemplate.update(sql, id);
-        if (deleteRow == 1) {
-            log.debug("Удален пользователь с ИД {}", id);
-        } else if (deleteRow > 1) {
-            log.error("Удалилось больше одного пользователя по ИД {}", id);
-        } else if (deleteRow == 0) {
-            log.error("Ни одного фильма по ИД {} не удалилось", id);
-            throw new UserNotFoundException("Нет пользователя с таким ИД для удаления");
+        Optional<User> out = get(user);
+        try {
+            int deleteRow = jdbcTemplate.update(sql, user);
+            if (deleteRow == 1) {
+                log.debug("Удален пользователь с ИД {}", user);
+            } else if (deleteRow > 1) {
+                log.error("Удалилось больше одного пользователя по ИД {}", user);
+            }
+            return out;
+        } catch (BadSqlGrammarException badSqlGrammarException) {
+            log.error("Проблемы с БД. Детали: \n" + badSqlGrammarException.getMessage());
+            return Optional.empty();
+        } catch (DataAccessException e) {
+            log.error("Проблемы с самой БД, детали: " + e.getMessage());
+            return Optional.empty();
         }
-        return out;
     }
 
     @Override
     public Optional<User> patch(User user) {
+        if (user == null) {
+            log.error("Пользователь не пришел для обновления");
+            return Optional.empty();
+        } else if (user.getId() == null) {
+            log.error("У пользователя нет ИД для обновления");
+            return Optional.empty();
+        }
         String sql = "UPDATE FILMORATE_USER " +
                 "SET " +
                 "USER_LOGIN = ?, " +
@@ -90,23 +113,29 @@ public class UserBDStorage implements UserStorage {
                 "BIRTHDAY = ?, " +
                 "EMAIL = ? " +
                 "WHERE USER_ID = ?";
-
-        int patchRow = jdbcTemplate.update(sql,
-                user.getLogin(),
-                user.getName(),
-                user.getBirthday().format(LocalDateFormatter4FilmReleaseDate.getFormatter()),
-                user.getEmail(),
-                user.getId()
-        );
-        if (patchRow == 1) {
+        try {
+            int patchRow = jdbcTemplate.update(sql,
+                    user.getLogin(),
+                    user.getName(),
+                    user.getBirthday().format(LocalDateFormatter4Date.getFormatter()),
+                    user.getEmail(),
+                    user.getId());
+            if (patchRow > 1) {
+                log.error("Обновлено больше одного пользователя по ИД {}", user.getId());
+                return this.get(user.getId());
+            } else if (patchRow == 0) {
+                log.error("Ни одного пользователя по ИД {} не обновилось", user.getId());
+                return Optional.empty();
+            }
             log.debug("Обновлен пользователь с ИД {}", user.getId());
-        } else if (patchRow > 1) {
-            log.error("Обновлено больше одного пользователя по ИД {}", user.getId());
-        } else if (patchRow == 0) {
-            log.error("Ни одного пользователя по ИД {} не обновилось", user.getId());
-            throw new UserNotFoundException("Не нашлось фильма с таким ИД для обновления: " + user.getId());
+            return this.get(user.getId());
+        } catch (BadSqlGrammarException badSqlGrammarException) {
+            log.error("Проблемы с БД. Детали: \n" + badSqlGrammarException.getMessage());
+            return Optional.empty();
+        } catch (DataAccessException e) {
+            log.error("Проблемы с самой БД, детали:\n" + e.getMessage());
+            return Optional.empty();
         }
-        return this.get(user.getId());
     }
 
     @Override
@@ -117,19 +146,22 @@ public class UserBDStorage implements UserStorage {
                 "BIRTHDAY, " +
                 "EMAIL " +
                 "FROM FILMORATE_USER ";
-        List<Optional<User>> users = jdbcTemplate.query(sql, new UserMapper());
-
-        if (users.isEmpty()) {
-            log.debug("Пользователей нет");
-        } else {
+        try {
+            List<Optional<User>> users = jdbcTemplate.query(sql, new UserMapper());
             log.debug("Найдено {} пользователей", users.size());
+            return users;
+        } catch (BadSqlGrammarException e) {
+            log.error("Проблемы при получении всех пользователей из БД. Детали:\n" + e.getMessage());
+            return Collections.emptyList();
         }
-
-        return users;
     }
 
     @Override
     public Optional<User> get(Integer id) {
+        if (id == null) { // Чекаем чо как
+            log.error("Пришел нулл для удаления из БД");
+            return Optional.empty();
+        }
         String sql = "SELECT USER_ID, " +
                 "USER_LOGIN, " +
                 "NAME, " +
@@ -137,15 +169,14 @@ public class UserBDStorage implements UserStorage {
                 "EMAIL " +
                 "FROM FILMORATE_USER " +
                 "WHERE USER_ID = ?";
-        Optional<User> user;
         try {
-            user = jdbcTemplate.queryForObject(sql, new UserMapper(), id);
+            return jdbcTemplate.queryForObject(sql, new UserMapper(), id);
         } catch (EmptyResultDataAccessException e) {
-            log.info("Пользователь с идентификатором {} не найден.", id);
-            throw new UserNotFoundException("Пользователь с идентификатором " + id + " не найден");
+            log.error("Пользователь с идентификатором {} не найден.", id);
+            return Optional.empty();
+        } catch (BadSqlGrammarException badSqlGrammarException) {
+            log.error("Проблемы с БД. Детали: \n" + badSqlGrammarException.getMessage());
+            return Optional.empty();
         }
-        //Основную работу делает Мапер
-        log.info("Найден Пользователь: {}", id);
-        return user;
     }
 }

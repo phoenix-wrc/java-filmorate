@@ -58,7 +58,8 @@ public class UserService {
     public User patch(User user) {
         //В хранилище будет вся логика
         return storage.patch(user).orElseThrow(() ->
-                new UserNotFoundException("Ошибка при изменение пользователя"));
+                new UserNotFoundException("Не удалось изменить пользователя: " + user));
+
     }
 
     public User add(User user) {
@@ -77,8 +78,9 @@ public class UserService {
     public User getUser(Integer id) {
         Optional<User> out = storage.get(id);
         if (out.isEmpty()) {
-            throw new UserNotFoundException("Нет такого пользователя");
+            throw new UserNotFoundException("Пользователь с идентификатором " + id + " не найден");
         }
+        log.debug("Пользователь с идентификатором {} найден", id);
         return out.get();
     }
 
@@ -87,5 +89,14 @@ public class UserService {
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(Collectors.toList());
+    }
+
+    public User deleteUser(Integer id) {
+        Optional<User> out = storage.delete(id);
+        if (out.isEmpty()) {
+            log.error("Ни одного фильма по ИД {} не удалилось", id);
+            throw new UserNotFoundException("Нет пользователя с таким ИД для удаления");
+        }
+        return out.get();
     }
 }

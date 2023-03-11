@@ -1,7 +1,7 @@
 package ru.yandex.practicum.filmorate.model.user;
 
 import org.springframework.jdbc.core.RowMapper;
-import ru.yandex.practicum.filmorate.model.film.LocalDateFormatter4FilmReleaseDate;
+import ru.yandex.practicum.filmorate.model.LocalDateFormatter4Date;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -17,7 +17,7 @@ public class UserMapper implements RowMapper<Optional<User>> {
                 .login(rs.getString("USER_LOGIN"))
                 .name(rs.getString("NAME"))
                 .birthday(LocalDate.parse(rs.getString("BIRTHDAY"),
-                        LocalDateFormatter4FilmReleaseDate.getFormatter()))
+                        LocalDateFormatter4Date.getFormatter()))
                 .email(rs.getString("EMAIL"))
                 .build());
     }
