@@ -17,7 +17,7 @@ class FilmBDMpaRatingStorageTest {
     private final FilmBDMpaRatingStorage storage;
 
     @Test
-    void getAllRatingsAfterInitialization() {
+    void shouldGetAllRatingsAfterInitialization() {
         var ratings = storage.ratings();
 
         assertThat(ratings).isNotNull();
@@ -28,7 +28,7 @@ class FilmBDMpaRatingStorageTest {
     @Test
     @Transactional
     @Sql("/drop.sql")
-    void getAllRatingsAfterDrop() {
+    void shouldNotGetAllRatingsAfterDrop() {
         var ratings = storage.ratings();
 
         assertThat(ratings).isNotNull();
@@ -37,7 +37,7 @@ class FilmBDMpaRatingStorageTest {
 
     @Test
     @Sql({"/test-schema.sql", "/test-data.sql"})
-    void getRatingByRightId() {
+    void shouldGetRatingByRightId() {
         var rating = storage.rating(1);
         assertThat(rating)
                 .isPresent()
@@ -48,7 +48,7 @@ class FilmBDMpaRatingStorageTest {
     }
 
     @Test
-    void getRatingByWrongId() {
+    void shouldNotGetRatingByWrongId() {
         var rating = storage.rating(9999);
         assertThat(rating)
                 .isEmpty();
@@ -56,7 +56,7 @@ class FilmBDMpaRatingStorageTest {
 
     @Test
     @Sql({"/test-schema.sql", "/test-data.sql"})
-    void getRatingByNullId() {
+    void shouldNotGetRatingByNullId() {
         var rating = storage.rating(null);
         assertThat(rating)
                 .isEmpty();

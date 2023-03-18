@@ -12,5 +12,5 @@ public interface UserFriendshipStorage {
 
     List<Optional<User>> getAllFriends(Integer id);
 
-    Boolean undoFriendship(Integer fromId, Integer toId);
+    Optional<Integer> undoFriendship(Integer fromId, Integer toId);
 }

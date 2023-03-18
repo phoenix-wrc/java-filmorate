@@ -28,7 +28,23 @@ public class UserService {
     }
 
     public boolean undoFriendship(Integer fromId, Integer toId) {
-        return friendshipStorage.undoFriendship(fromId, toId);
+        var deleteRow = friendshipStorage.undoFriendship(fromId, toId);
+        if (deleteRow.isEmpty()) {
+            log.error("Какие-то проблемы с удалением дружбы");
+            throw new UserNotFoundException("При удалении запроса в друзья что-то поло не так");
+        } else if (deleteRow.get() == 1) {
+            log.debug("Удалена дружба между пользователями с ИД {}, {}", fromId, toId);
+            return true;
+        } else if (deleteRow.get() > 1) {
+            log.error("Удалилось больше одного дружбы между пользователями по ИД {}, {}"
+                    , fromId, toId);
+            return false;
+        } else if (deleteRow.get() == 0) {
+            log.error("Ни одной дружбы по ИД {} и {} не удалилось", fromId, toId);
+            throw new UserNotFoundException("При удалении запроса в друзья что-то поло не так");
+        } else {
+            return false;
+        }
     }
 
     public boolean makeUsersFriends(Integer fromId, Integer toId) {

@@ -82,14 +82,14 @@ public class InMemoryUserFriendshipStorage implements UserFriendshipStorage {
 //        // Делаю тут т.к. фроде собирать друзей это не функционал хранилища.
     }
 
-    public Boolean undoFriendship(Integer fromId, Integer toId) {
+    public Optional<Integer> undoFriendship(Integer fromId, Integer toId) {
         isExistUser(fromId);
         isExistUser(toId);
         // Взяли двух пользователей, если нет ошибок можно работать
         boolean isDeletedFirst = friendship.get(fromId).remove(toId);
         boolean isDeletedSecond = friendship.get(toId).remove(fromId);
         //Тут если что-то не так то пофиг
-        return isDeletedFirst && isDeletedSecond;
+        return Optional.of(1);
     }
 
     private User isExistUser(Integer id) {
