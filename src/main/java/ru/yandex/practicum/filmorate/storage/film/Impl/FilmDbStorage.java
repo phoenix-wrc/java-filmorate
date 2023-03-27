@@ -3,7 +3,9 @@ package ru.yandex.practicum.filmorate.storage.film.Impl;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreatorFactory;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -38,7 +40,7 @@ public class FilmDbStorage implements FilmStorage {
 
     //Эти классы будут DAO — объектами доступа к данным
     @Override
-    public Optional<Film> add(Film film) {
+    public Optional<Film> add(@NonNull Film film) {
         String sql = "INSERT INTO FILMORATE_FILM " +
                 "(TITLE, DESCRIPTION, RELEASE_DATE, DURATION_MINUTES, RATING_MPA) " +
                 "VALUES (?, ?, ?, ?, ?)";
@@ -58,8 +60,13 @@ public class FilmDbStorage implements FilmStorage {
         );
         //};
         // Решение из инета, но заработало как надо
-        int rowEffected = jdbcTemplate.update(psc,
-                keyHolder);
+        try {
+            int rowEffected = jdbcTemplate.update(psc,
+                    keyHolder);
+        } catch (BadSqlGrammarException e) {
+            log.error("Проблемы с БД. Детали: {}", e.getMessage());
+            return Optional.empty();
+        }
         Integer index;
         try {
             index = keyHolder.getKeyAs(Integer.class);
@@ -74,22 +81,31 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     @Override
-    public Optional<Film> delete(Integer id) {
-        String sql = "DELETE FROM FILMORATE_LIKE WHERE FILM_ID = ?; " +
-                "DELETE FROM FILMORATE_FILM_GENRE WHERE FILM_ID = ?;" +
+    public Optional<Film> delete(@NonNull Integer id) {
+        String sql = //"DELETE FROM FILMORATE_LIKE WHERE FILM_ID = ?; " +
+//                "DELETE FROM FILMORATE_FILM_GENRE WHERE FILM_ID = ?;" +
                 "DELETE FROM FILMORATE_FILM WHERE FILM_ID = ?  ";
         //Пока так, можно переделать каскадом но нужно еще почитать доку к БД
-        Optional<Film> out = getFilm(id);
-        int deleteRow = jdbcTemplate.update(sql, id);
-        if (deleteRow == 1) {
-            log.debug("Удален фильм с ИД " + id);
-        } else if (deleteRow > 1) {
-            log.error("Удалилось больше одного фильма по ИД" + id);
-        } else if (deleteRow == 0) {
-            log.error("Ни одного фильма по ИД" + id + "не удалилось");
+        // Оставляю оба варианта Т.к. не понимаю как будет стабильно работать, вроде каскад сам заработал
+        try {
+            Optional<Film> out = getFilm(id);
+            int deleteRow = jdbcTemplate.update(sql, id);
+            if (deleteRow == 1) {
+                log.debug("Удален фильм с ИД " + id);
+            } else if (deleteRow > 1) {
+                log.error("Удалилось больше одного фильма по ИД" + id);
+            } else if (deleteRow == 0) {
+                log.error("Ни одного фильма по ИД " + id + " не удалилось");
+                return Optional.empty();
+            }
+            return out;
+        } catch (BadSqlGrammarException e) {
+            log.error("Проблемы с БД. Детали: {}", e.getMessage());
+            return Optional.empty();
+        } catch (DataIntegrityViolationException e) {
+            log.error("Проблемы с удалением. Детали: {}", e.getMessage());
             return Optional.empty();
         }
-        return out;
     }
 
     @Override

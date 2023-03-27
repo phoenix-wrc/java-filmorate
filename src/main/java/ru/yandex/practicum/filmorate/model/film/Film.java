@@ -23,6 +23,7 @@ public class Film {
 	private final String description;
 
 	@FilmReleaseDate(message = "Дата релиза не может быть ранее 28.12.1895")
+	@NotNull(message = "Дата должна быть")
 	private final LocalDate releaseDate;
 
 	@Min(1)

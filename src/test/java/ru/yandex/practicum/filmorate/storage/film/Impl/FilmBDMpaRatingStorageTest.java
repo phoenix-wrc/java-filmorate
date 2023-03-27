@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ class FilmBDMpaRatingStorageTest {
 
     @Test
     @Transactional
+    @Rollback
     @Sql("/drop.sql")
     void shouldNotGetAllRatingsAfterDrop() {
         var ratings = storage.ratings();
@@ -41,8 +43,6 @@ class FilmBDMpaRatingStorageTest {
         var rating = storage.rating(1);
         assertThat(rating)
                 .isPresent()
-                .hasValueSatisfying(r ->
-                        assertThat(r).hasFieldOrPropertyWithValue("id", 1))
                 .hasValueSatisfying(r ->
                         assertThat(r).hasFieldOrPropertyWithValue("id", 1));
     }

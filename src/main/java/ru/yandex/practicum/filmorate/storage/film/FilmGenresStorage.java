@@ -12,7 +12,7 @@ public interface FilmGenresStorage {
 
     List<Optional<Genre>> getGenres(Integer filmId);
 
-    void setGenresToFilm(List<Genre> genres, Integer id);
+    Boolean setGenresToFilm(List<Genre> genres, Integer id);
 
-    void updateGenresToFilm(List<Genre> genres, Integer id);
+    Boolean updateGenresToFilm(List<Genre> genres, Integer id);
 }
