@@ -23,7 +23,7 @@ public class User {
     private final String name;
     @PastOrPresent(message = "Дата рождения должна быть хотя б сегодня, или раньше")
     private final LocalDate birthday;
-	private Integer id;
+    private Integer id;
 
     public String getName() {
         if (name.isBlank() || name.isEmpty()) {

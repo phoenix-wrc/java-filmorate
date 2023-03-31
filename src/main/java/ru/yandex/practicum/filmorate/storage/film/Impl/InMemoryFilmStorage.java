@@ -15,13 +15,13 @@ import java.util.stream.Collectors;
 @Component
 public class InMemoryFilmStorage implements FilmStorage {
 
-	private Integer currentFilmId; //Счетчик ИДишников фильма
-	private final Map<Integer, Film> films; // Временное хранилище фильмы
+    private final Map<Integer, Film> films; // Временное хранилище фильмы
+    private Integer currentFilmId; //Счетчик ИДишников фильма
 
-	public InMemoryFilmStorage() {
-		currentFilmId = 1;
-		films = new HashMap<>();
-	}
+    public InMemoryFilmStorage() {
+        currentFilmId = 1;
+        films = new HashMap<>();
+    }
 
     @Override
     public Optional<Film> add(Film film) {
@@ -35,17 +35,17 @@ public class InMemoryFilmStorage implements FilmStorage {
                     .duration(film.getDuration())
                     .mpa(film.getMpa())
                     .build();
-		} else if (films.containsKey(film.getId())) {
-			throw new ValidationException("Фильм с таким ИД уже есть");
-		} else {
-			throw new ValidationException("Зачем передал фильм с ИД?");
-		}
-		Film out = films.put(film.getId(), film);
-		if (out != null) {
+        } else if (films.containsKey(film.getId())) {
+            throw new ValidationException("Фильм с таким ИД уже есть");
+        } else {
+            throw new ValidationException("Зачем передал фильм с ИД?");
+        }
+        Film out = films.put(film.getId(), film);
+        if (out != null) {
             return Optional.of(out);
-		}
+        }
         return Optional.of(film);
-	}
+    }
 
     @Override
     public Optional<Film> delete(Integer id) {
@@ -92,8 +92,8 @@ public class InMemoryFilmStorage implements FilmStorage {
         return Optional.of(films.size());
     }
 
-	private Integer getNextId() {
-		//внутренний метод нумерации
-		return currentFilmId++;
-	}
+    private Integer getNextId() {
+        //внутренний метод нумерации
+        return currentFilmId++;
+    }
 }

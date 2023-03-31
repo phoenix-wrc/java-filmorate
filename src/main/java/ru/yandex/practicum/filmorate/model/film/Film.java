@@ -12,25 +12,25 @@ import java.util.List;
 @Builder
 public class Film {
 
-	private final Integer id;
+    private final Integer id;
 
-	@NotNull(message = "Не задалось имя")
-	@NotEmpty(message = "Имя не должно быть из одних пробелов")
-	@NotBlank(message = "Имя не должно быть пустым")
-	private final String name;
+    @NotNull(message = "Не задалось имя")
+    @NotEmpty(message = "Имя не должно быть из одних пробелов")
+    @NotBlank(message = "Имя не должно быть пустым")
+    private final String name;
 
-	@Size(max = 200, message = "Длинна описания до 200 символов")
-	private final String description;
+    @Size(max = 200, message = "Длинна описания до 200 символов")
+    private final String description;
 
-	@FilmReleaseDate(message = "Дата релиза не может быть ранее 28.12.1895")
-	@NotNull(message = "Дата должна быть")
-	private final LocalDate releaseDate;
+    @FilmReleaseDate(message = "Дата релиза не может быть ранее 28.12.1895")
+    @NotNull(message = "Дата должна быть")
+    private final LocalDate releaseDate;
 
-	@Min(1)
-	private final Integer duration;
+    @Min(1)
+    private final Integer duration;
 
-	@NotNull(message = "Рейтинг обязателен")
-	private final MpaRating mpa;
-	//	@Setter
-	private List<Genre> genres;
+    @NotNull(message = "Рейтинг обязателен")
+    private final MpaRating mpa;
+    //	@Setter
+    private List<Genre> genres;
 }

@@ -73,7 +73,7 @@ public class FilmDbStorage implements FilmStorage {
             log.debug("Сохранили фильм с индексом {}", index);
         } catch (NullPointerException e) {
             log.error("Новый ИД из базы не вернулся, дальше всё не будет работать");
-            return Optional.empty(); //Незнаю что возвращать. Можно рефакторнуть и в сигнатурах задать возвращение опшинала, но потом
+            return Optional.empty();
         }
 //         Отдельно инсертим в свои таблицы жанры
         genresStorage.setGenresToFilm(film.getGenres(), index);

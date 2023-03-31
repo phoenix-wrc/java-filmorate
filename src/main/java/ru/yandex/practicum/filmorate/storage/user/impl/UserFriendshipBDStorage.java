@@ -56,26 +56,26 @@ public class UserFriendshipBDStorage implements UserFriendshipStorage {
         if (fromId == null && toId == null) {
             return Collections.emptyList();
         }
-        String sql = "SELECT friendship.TO_USER AS USER_ID, " +
-                "FU.USER_LOGIN, " +
-                "FU.NAME, " +
-                "FU.BIRTHDAY, " +
-                "FU.EMAIL " +
-                "FROM (SELECT ff1.TO_USER " +
-                "FROM filmorate_friendship AS ff1 " +
-                "WHERE ff1.from_user = ? " +
-                "UNION ALL " +
-                "SELECT ff2.TO_USER " +
-                "FROM filmorate_friendship AS ff2 " +
-                "WHERE ff2.from_user = ?) " +
-                "AS friendship " +
-                "JOIN FILMORATE_USER AS FU " +
-                "ON friendship.TO_USER = FU.USER_ID " +
-                "GROUP BY USER_ID, " +
-                "FU.USER_LOGIN, " +
-                "FU.NAME, FU.BIRTHDAY, " +
-                "FU.EMAIL " +
-                "HAVING COUNT(TO_USER) > 1";
+        String sql = "SELECT friendship.TO_USER AS USER_ID, "
+                + "FU.USER_LOGIN, "
+                + "FU.NAME, "
+                + "FU.BIRTHDAY, "
+                + "FU.EMAIL "
+                + "FROM (SELECT ff1.TO_USER "
+                + "FROM filmorate_friendship AS ff1 "
+                + "WHERE ff1.from_user = ? "
+                + "UNION ALL "
+                + "SELECT ff2.TO_USER "
+                + "FROM filmorate_friendship AS ff2 "
+                + "WHERE ff2.from_user = ?) "
+                + "AS friendship "
+                + "JOIN FILMORATE_USER AS FU "
+                + "ON friendship.TO_USER = FU.USER_ID "
+                + "GROUP BY USER_ID, "
+                + "FU.USER_LOGIN, "
+                + "FU.NAME, FU.BIRTHDAY, "
+                + "FU.EMAIL "
+                + "HAVING COUNT(TO_USER) > 1";
         try {
             List<Optional<User>> query = jdbcTemplate.query(sql, new UserMapper(), fromId, toId);
             log.debug("Найдено {} пользователей", query.size());
@@ -89,14 +89,14 @@ public class UserFriendshipBDStorage implements UserFriendshipStorage {
 
     @Override
     public List<Optional<User>> getAllFriends(Integer id) {
-        String sql = "SELECT USER_ID, " +
-                "USER_LOGIN, " +
-                "NAME, " +
-                "BIRTHDAY, " +
-                "EMAIL " +
-                "FROM FILMORATE_USER " +
-                "JOIN FILMORATE_FRIENDSHIP FF on FILMORATE_USER.USER_ID = FF.TO_USER " +
-                "WHERE FF.FROM_USER = ? ";
+        String sql = "SELECT USER_ID, "
+                + "USER_LOGIN, "
+                + "NAME, "
+                + "BIRTHDAY, "
+                + "EMAIL "
+                + "FROM FILMORATE_USER "
+                + "JOIN FILMORATE_FRIENDSHIP FF on FILMORATE_USER.USER_ID = FF.TO_USER "
+                + "WHERE FF.FROM_USER = ? ";
         try {
             List<Optional<User>> users = jdbcTemplate.query(sql, new UserMapper(), id);
             log.debug("Найдено {} пользователей, по ИД {}", users.size(), id);
