@@ -11,7 +11,6 @@ import org.springframework.jdbc.core.PreparedStatementCreatorFactory;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.exceptions.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.model.LocalDateFormatter4Date;
 import ru.yandex.practicum.filmorate.model.film.Film;
 import ru.yandex.practicum.filmorate.model.film.FilmMapper;
@@ -21,6 +20,7 @@ import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import java.sql.Types;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 
 @Slf4j
@@ -109,7 +109,7 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     @Override
-    public Optional<Film> patch(Film film) {
+    public Optional<Film> patch(@NonNull Film film) {
         String sql = "UPDATE FILMORATE_FILM " +
                 "SET " +
                 "TITLE = ?, " +
@@ -119,24 +119,29 @@ public class FilmDbStorage implements FilmStorage {
                 "RATING_MPA = ? " +
                 "WHERE FILM_ID = ?";
 
-        int patchRow = jdbcTemplate.update(sql,
-                film.getName(),
-                film.getDescription(),
-                film.getReleaseDate().format(LocalDateFormatter4Date.getFormatter()),
-                film.getDuration(),
-                film.getMpa().getId(),
-                film.getId()
-        );
-        if (patchRow == 1) {
-            log.debug("Обновлен фильм с ИД " + film.getId());
-        } else if (patchRow > 1) {
-            log.error("Обновлено больше одного фильма по ИД" + film.getId());
-        } else if (patchRow == 0) {
-            log.error("Ни одного фильма по ИД {} не обновилось", film.getId());
-            throw new FilmNotFoundException("Не нашлось фильма с таким ИД для обновления");
+        try {
+            int patchRow = jdbcTemplate.update(sql,
+                    film.getName(),
+                    film.getDescription(),
+                    film.getReleaseDate().format(LocalDateFormatter4Date.getFormatter()),
+                    film.getDuration(),
+                    film.getMpa().getId(),
+                    film.getId()
+            );
+            if (patchRow == 1) {
+                log.debug("Обновлен фильм с ИД " + film.getId());
+                return getFilm(film.getId());
+            } else if (patchRow > 1) {
+                log.error("Обновлено больше одного фильма по ИД" + film.getId());
+                return Optional.empty();
+            } else {
+                log.error("Ни одного фильма по ИД {} не обновилось", film.getId());
+                return Optional.empty();
+            }
+        } catch (BadSqlGrammarException e) {
+            log.error("Что-то не так с БД. Детали: {}", e.getMessage());
+            return Optional.empty();
         }
-
-        return getFilm(film.getId());
     }
 
     @Override
@@ -146,11 +151,16 @@ public class FilmDbStorage implements FilmStorage {
                 "JOIN FILMORATE_MPA_RATING AS mpa " +
                 "ON film.RATING_MPA = mpa.RATING_ID";
 
-        return jdbcTemplate.query(sql, new FilmMapper());
+        try {
+            return jdbcTemplate.query(sql, new FilmMapper());
+        } catch (BadSqlGrammarException e) {
+            log.error("Проблемы с БД. Детали: {}", e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     @Override
-    public Optional<Film> getFilm(Integer id) {
+    public Optional<Film> getFilm(@NonNull Integer id) {
         String sql = "SELECT film.FILM_ID, film.TITLE, film.DESCRIPTION, film.RELEASE_DATE, film.DURATION_MINUTES," +
                 "film.RATING_MPA, mpa.RATING FROM FILMORATE_FILM AS film " +
                 "JOIN FILMORATE_MPA_RATING AS mpa " +
@@ -161,6 +171,9 @@ public class FilmDbStorage implements FilmStorage {
             return jdbcTemplate.queryForObject(sql, new FilmMapper(), id);
         } catch (IllegalStateException | EmptyResultDataAccessException e) {
             log.error("Не найден фильм по ИД: {}. Детали {}", id, e.getMessage());
+            return Optional.empty();
+        } catch (BadSqlGrammarException e) {
+            log.error("Проблемы с БД. Детали: {}", e.getMessage());
             return Optional.empty();
         }
     }
@@ -175,6 +188,9 @@ public class FilmDbStorage implements FilmStorage {
             return Optional.ofNullable(filmCount);
         } catch (IllegalStateException | EmptyResultDataAccessException e) {
             log.error("Ошибка при вычислении количества записей в таблице фильм. Детали {}", e.getMessage());
+            return Optional.empty();
+        } catch (BadSqlGrammarException e) {
+            log.error("Ошибка с БД. Детали {}", e.getMessage());
             return Optional.empty();
         }
     }

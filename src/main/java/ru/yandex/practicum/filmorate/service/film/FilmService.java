@@ -82,7 +82,7 @@ public class FilmService {
 
 	public Film patch(Film film) {
 		var out = storage.patch(film).orElseThrow(() ->
-				new FilmNotFoundException("Ошибка при изменении фильма")
+				new FilmNotFoundException("Не нашлось фильма с таким ИД для обновления")
 		);
 		// Что бы поработать с жанрами нужно получается их сначало удалить а потом снова добавить.
 		// В теории можно использовать мердж, но не понятно тогда как удалить если жанр убрали.

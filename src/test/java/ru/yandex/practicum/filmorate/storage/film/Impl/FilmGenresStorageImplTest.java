@@ -74,7 +74,7 @@ class FilmGenresStorageImplTest {
 //    void getGenres()
 
     @Test
-    @Sql({"/test-user-data.sql"})
+    @Sql({"/test-schema.sql", "/test-data.sql", "/test-user-data.sql"})
     void shouldGetGenresByFilmId() {
         var genres = storage.getGenres(300);
         assertThat(genres).isNotNull();

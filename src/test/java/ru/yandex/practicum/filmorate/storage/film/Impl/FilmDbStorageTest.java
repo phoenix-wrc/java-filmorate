@@ -33,11 +33,7 @@ class FilmDbStorageTest {
 
 
     //    void add(
-//
-//        assertThat(film)
-//                .isEmpty()
-//                .hasValueSatisfying(r ->
-//                        assertThat(r).hasFieldOrPropertyWithValue("id", 1));)
+
     @Test
     @Transactional
     @Rollback
@@ -107,7 +103,6 @@ class FilmDbStorageTest {
 
         assertThat(film)
                 .isEmpty();
-
     }
 
 
@@ -181,7 +176,8 @@ class FilmDbStorageTest {
     @Rollback
     @Sql({"/test-schema.sql", "/test-data.sql", "/test-user-data.sql"})
     void shouldPatchFOldFilm() {
-        var film = storage.patch(patchFilm(storage.getFilm(100).get()));
+        var film = storage.patch(patchFilm(storage.getFilm(100).orElseThrow(() ->
+                new AssertionError("Фильм не добавился"))));
 
         assertThat(film)
                 .isPresent()
@@ -195,12 +191,55 @@ class FilmDbStorageTest {
     @Test
     @Transactional
     @Rollback
-    @Sql("/drop.sql")
-    void shouldNotPatchFilmWithoutTable() {
-        var film = storage.patch(100);
+    @Sql({"/test-schema.sql", "/test-data.sql", "/test-user-data.sql"})
+    void shouldPatchNewFilm() {
+        var film = nemFilm();
+        var addedFilm = storage.add(film).orElseThrow(() ->
+                new AssertionError("Фильм не добавился"));
+
+        var patchedFilm = patchFilm(addedFilm);
+        var outFilm = storage.patch(patchedFilm);
+
+        assertThat(outFilm)
+                .isPresent()
+                .hasValueSatisfying(r1 ->
+                        assertThat(r1).hasFieldOrPropertyWithValue("id", patchedFilm.getId()))
+                .hasValueSatisfying(r1 ->
+                        assertThat(r1.getName()).contains("patched"));
+    }
+
+    @Test
+//    @Sql("/drop.sql")
+    void shouldNotPatchFilmWithoutId() {
+        var film = storage.patch(nemFilm());
 
         assertThat(film)
                 .isEmpty();
+    }
+
+    @Test
+    @Sql({"/test-schema.sql", "/test-data.sql", "/test-user-data.sql"})
+    void shouldNotPatchFilmWithWrongId() {
+        var film = Film.builder()
+                .id(999)
+                .name("Bla-bla")
+                .releaseDate(LocalDate.now())
+                .mpa(new MpaRating(1, ""))
+                .build();
+
+        var out = storage.patch(film);
+
+        assertThat(out)
+                .isEmpty();
+    }
+
+    @Test
+    void shouldNotPatchFilmWithNull() {
+        try {
+            var film = storage.patch(null);
+        } catch (NullPointerException e) {
+            assertThat(e).isInstanceOf(NullPointerException.class);
+        }
     }
 
     @Test
@@ -208,8 +247,103 @@ class FilmDbStorageTest {
     @Rollback
     @Sql("/drop.sql")
     void shouldNotPatchFilmWithoutTable() {
-        var film = storage.patch(100);
+        var film = storage.patch(Film.builder()
+                .id(100)
+                .name("Bla-bla")
+                .releaseDate(LocalDate.now())
+                .mpa(new MpaRating(1, ""))
+                .build());
 
+        assertThat(film)
+                .isEmpty();
+    }
+
+
+    //    void films()
+    @Test
+    @Sql({"/test-schema.sql", "/test-data.sql", "/test-user-data.sql"})
+    void shouldGetFilmsWithOldData() {
+        var size = storage.size();
+        assertThat(size)
+                .isPresent()
+                .hasValue(10);
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    @Sql({"/drop.sql", "/test-schema.sql", "/test-data.sql"})
+    void shouldGetFilmsWithNewData() {
+        var films = storage.films();
+        assertThat(films).asList()
+                .isEmpty();
+
+        storage.add(nemFilm());
+        var films1 = storage.films();
+        assertThat(films1).asList()
+                .hasSize(1);
+
+        storage.add(nemFilm());
+        var films2 = storage.films();
+        assertThat(films2).asList()
+                .hasSize(2);
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    @Sql({"/drop.sql"})
+    void shouldNotGetFilmsWithoutTables() {
+        var films = storage.films();
+        assertThat(films).asList()
+                .isEmpty();
+    }
+
+    //    getFilm()
+    @Test
+    @Sql({"/test-schema.sql", "/test-data.sql", "/test-user-data.sql"})
+    void shouldGetFilmWithOldData() {
+        var size = storage.getFilm(100);
+        assertThat(size)
+                .isPresent()
+                .hasValueSatisfying(r ->
+                        assertThat(r).hasFieldOrPropertyWithValue("id", 100));
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    @Sql({"/drop.sql", "/test-schema.sql", "/test-data.sql"})
+    void shouldGetFilmWithNewData() {
+        storage.add(nemFilm());
+        var film1 = storage.getFilm(1);
+        assertThat(film1)
+                .isPresent()
+                .hasValueSatisfying(r ->
+                        assertThat(r).hasFieldOrPropertyWithValue("id", 1));
+
+        storage.add(nemFilm());
+        var film2 = storage.getFilm(2);
+        assertThat(film2)
+                .isPresent()
+                .hasValueSatisfying(r ->
+                        assertThat(r).hasFieldOrPropertyWithValue("id", 2));
+    }
+
+    @Test
+    void shouldNotGetFilmWithNull() {
+        try {
+            var film = storage.getFilm(null);
+            assertThat(film).asList()
+                    .isEmpty();
+        } catch (NullPointerException e) {
+            assertThat(e).isInstanceOf(NullPointerException.class);
+        }
+    }
+
+    @Test
+    void shouldNotGetFilmWitWrongId() {
+        var film = storage.getFilm(99999);
         assertThat(film)
                 .isEmpty();
     }
@@ -217,10 +351,9 @@ class FilmDbStorageTest {
     @Test
     @Transactional
     @Rollback
-    @Sql("/drop.sql")
-    void shouldNotPatchFilmWithoutTable() {
-        var film = storage.patch(100);
-
+    @Sql({"/drop.sql", "/test-schema.sql", "/test-data.sql"})
+    void shouldNotGetFilmWithEmptyTables() {
+        var film = storage.getFilm(100);
         assertThat(film)
                 .isEmpty();
     }
@@ -228,38 +361,55 @@ class FilmDbStorageTest {
     @Test
     @Transactional
     @Rollback
-    @Sql("/drop.sql")
-    void shouldNotPatchFilmWithoutTable() {
-        var film = storage.patch(100);
-
+    @Sql({"/drop.sql"})
+    void shouldNotGetFilmWithoutTables() {
+        var film = storage.getFilm(100);
         assertThat(film)
                 .isEmpty();
+    }
+
+    //    size()
+    @Test
+    @Sql({"/test-schema.sql", "/test-data.sql", "/test-user-data.sql"})
+    void shouldGetSizeWithOldData() {
+        var size = storage.size();
+        assertThat(size)
+                .isPresent()
+                .hasValue(10);
     }
 
     @Test
     @Transactional
     @Rollback
-    @Sql("/drop.sql")
-    void shouldNotPatchFilmWithoutTable() {
-        var film = storage.patch(100);
+    @Sql({"/drop.sql", "/test-schema.sql", "/test-data.sql"})
+    void shouldGetSizeWithNewData() {
+        var zeroSize = storage.size();
+        assertThat(zeroSize)
+                .isPresent()
+                .hasValue(0);
+        storage.add(nemFilm());
+        var size1 = storage.size();
+        assertThat(size1)
+                .isPresent()
+                .hasValue(1);
+        storage.add(nemFilm());
+        var size2 = storage.size();
+        assertThat(size2)
+                .isPresent()
+                .hasValue(2);
+    }
 
-        assertThat(film)
+    @Test
+    @Transactional
+    @Rollback
+    @Sql({"/drop.sql"})
+    void shouldNotGetSizeWithoutTables() {
+        var size = storage.size();
+        assertThat(size)
                 .isEmpty();
     }
 
-    @Test
-    void films() {
-    }
-
-    @Test
-    void getFilm() {
-    }
-
-    @Test
-    void size() {
-    }
-
-
+    //service4tests
     private Film nemFilm() {
         return Film.builder()
                 .name("addedFilm")
